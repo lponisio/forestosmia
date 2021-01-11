@@ -27,7 +27,7 @@ vegcover <- read.csv(file.path(dir,
                       stringsAsFactors=FALSE)
 
 
-## ************CLEAN PARASITE DATA AND ADD PARASITE SUMMARY METRICS**************************************
+## ************CLEAN PARASITE DATA AND ADD SUMMARY METRICS**************************************
 
 ## fix site names to match between datasets
 parasite$Stand <- as.character(par.path$Site)
@@ -121,112 +121,110 @@ parasitenames <- c("Crithidia", "Ascophaera", "Apicystis")
 parasite$ParasiteRichness <- rowSums(parasite[,parasitenames])
 parasite$AnyParasite <- (parasite$ParasiteRichness > 0)*1
 
+## calculate total sick individuals for each site
 
-## ************CLEAN VEG COVER DATA**************************************
+sick.totals <- aggregate(parasite[c(parasitenames)],
+                         list(Stand=parasite$Stand,
+                              UniqueID=parasite$UniqueID),
+                         sum, na.rm=TRUE)
+
+tested.totals <- aggregate(parasite[c(parasitenames)],
+                           list(Stand=parasite$Stand,
+                                UniqueID=parasite$UniqueID),
+                           function(x) sum(!is.na(x)))
+
+sick.totals$ScreenedPar <- tested.totals$Crithidia
+
+sick.totals[,parasitenames] <-
+  sick.totals[,parasitenames]/sick.totals$ScreenedPar
+
+parasite<- merge(sick.totals, parasite)
+
+## ************CLEAN VEG COVER DATA, ADD SUMMARY METRICS, MERGE TO PARASITE DATA*********************************
 
 ## fix site names to match between datasets
 vegcover$Stand <- as.character(vegcover$Stand)
 vegcover$Stand[vegcover$Stand ==
                  "Alexander Rd."]  <- "Alexander Rd"
 
-## *************************************************************
-## calculate site level characteristics for bees
-## abundance (average between sample rounds)
-abund.SR.bees <- aggregate(list(Abund=bees$no_individuals),
-                           list(Site=bees$site,
-                                SampleRound=bees$sample_pd),
-                           sum)
+## calculate stand-level broadleaf cover (stand=site)
+## 
+## keep only data for "broadleaf" trees, srubs, and forbs
+vegcover <- vegcover[!vegcover$Broadleaf == "0",]
 
-abund.SR.bees <- tapply(abund.SR.bees$Abund,
-                        abund.SR.bees$Site, mean)
+## replace "tr" (tracce) with .01
+vegcover$perCover[vegcover$perCover ==
+                 "tr"]  <- "0.01"
 
-## richness (total for a site)
-site.bees <- aggregate(list(BeeRichness=bees$genus_sub_sp),
-                       list(Site=bees$site),
-                       function(x) length(unique(x)))
+vegcover$perCover[vegcover$perCover ==
+                    "TR"]  <- "0.01"
 
-site.bees$BeeAbund <- abund.SR.bees[match(names(abund.SR.bees),
-                                          site.bees$Site)]
+## average abundance of broadleaf cover among plots at a site
 
-## *************************************************************
-## calculate site level characteristics for veg and merge with bee data
+BLcover.site <- aggregate(list(BLcover=vegcover$perCover), 
+                          list(Stand=vegcover$Stand),
+                          mean)
+                          
 
-veg.site <- aggregate(list(AbundWoodyFlowers=veg$NoTreeShrubsFlower,
-                           AbundAnnualFlowers=veg$NumTotalFlowers,
-                           PlantRichness=veg$NumHerbPlantSpp,
-                           PercentBareSoil=veg$PercentBareSoil),
-                      list(Site=veg$Site),
-                      mean)
+## merge with parasite data. 
 
-site.char <- merge(veg.site, site.bees)
+allspecdata <- merge(BLcover.site, parasite)
 
-site.char <- merge(site.char,
-                   unique(veg[, c("Site", "Size", "natural1000m",
-                                  "natural2000m")]))
 
-## *************************************************************
-## calculate densities to control for garden size
+## ************CLEAN STAND INFO DATA, MERGE *********************************
+## merge stand info data onto allspec
 
-site.char$BeeDensity <- site.char$BeeAbund/site.char$Size
-site.char$BeeRichnessArea <- site.char$BeeRichness/site.char$Size
+##WHY DID I LOSE SO MANY UNIQUE IDs? I should have like 366?
 
-site.char$WoodyFlowerDensity <- site.char$AbundWoodyFlowers/site.char$Size
-site.char$AnnualFlowerDensity <-
-    site.char$AbundAnnualFlowers/site.char$Size
-site.char$PlantRichnessArea <- site.char$PlantRichness/site.char$Size
+allspecdata <- merge(allspecdata, standinfo)
+colnames(allspecdata)
+allspecdata$NOTES <- NULL
+colnames(allspecdata)
 
-## *************************************************************
-## calculate total sick individuals for each site, bad thing
+## ************CLEAN DBH DATA, MERGE *********************************
 
-sick.totals <- aggregate(par.path[c(parasites, pathogens)],
-                         list(Site=par.path$Site,
-                              Genus=par.path$Genus),
-                         sum, na.rm=TRUE)
+## let's remove the column "live or dead" since it's not correctly filled out
+dbh$LiveorDead <- NULL
 
-tested.totals <- aggregate(par.path[c(parasites, pathogens)],
-                           list(Site=par.path$Site,
-                                Genus=par.path$Genus),
-                           function(x) sum(!is.na(x)))
+## we want tree species richness, tree species abundance, tree DBH averaged across plots at a site
 
-sick.totals$ScreenedPath <- tested.totals$CBPV
-sick.totals$ScreenedPar <- tested.totals$Phorid
+## then merge to dataset
 
-sick.totals[,parasites] <-
-    sick.totals[,parasites]/sick.totals$ScreenedPar
-sick.totals[,pathogens] <-
-    sick.totals[,pathogens]/sick.totals$ScreenedPath
+## ************CLEAN FLORAL DATA, MERGE *********************************
+
+## we want abundance flowers (abundflw), richness flowering species (richnessflwingsp), and abundfloweringsp 
+
+## let's drop the column "vials" since it's not correctly filled out
+floral$Vials <- NULL
+
+## some ID data missing, I emailed Jim and Sara about how to proceed. 
+## ...Can each observation be assumed to be a distinct plant species?
+
+## ************CLEAN REPRODUCTIVE DATA, MERGE *********************************
+
+## want sex ratio, offspring production, foraging trip length
+
+## ************BEE DIVERSE DATA, MERGE *********************************
+
+## I don't have this data yet from them? will calculate wild bee richness and wild bee abundance
+
+
 
 ## *************************************************************
-## standardize varaibles
-path.variables <- c("WoodyFlowerDensity", "AnnualFlowerDensity",
-                    "PlantRichnessArea", "natural1000m",
-                    "natural2000m", "PercentBareSoil", "BeeDensity")
+## standardize varaibles in our master dataset, 
+path.variables <- c("BLcover","Acres")
 
 standardize <- function(x)
-(x-mean(x, na.rm=TRUE))/sd(x, na.rm=TRUE)
+  (x-mean(x, na.rm=TRUE))/sd(x, na.rm=TRUE)
 
-site.char[,path.variables] <- apply(site.char[,path.variables], 2,
-                                    standardize)
+allspecdata[,path.variables] <- apply(allspecdata[,path.variables], 2,
+                                      standardize)
 
 ## *************************************************************
-## merge pathogen and site data
-
-dim(par.path)
-## okay to drop controls
-par.path$Site[!par.path$Site %in% site.char$Site]
-
-par.path <- merge(par.path, site.char)
-par.path$Date <- NULL
-dim(par.path)
-
-sick.totals <- merge(sick.totals, site.char)
-
 ## write out final data
 write.csv(par.path, file=file.path(save.dir,
                                    "specimens-complete.csv"), row.names=FALSE)
 
-save.dir.git <- "~/Dropbox/urbanbeeparasites/data"
-save(par.path,
-     site.char, sick.totals,
+save.dir.git <- "~/Dropbox/forestosmia/data"
+save(allspecdata,
      file=file.path(save.dir.git, "specimens-complete.Rdata"))
-
