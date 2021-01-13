@@ -1,4 +1,5 @@
 rm(list=ls())
+library(dplyr)
 ## prepares raw data and creates dataset for analyses
 
 dir <- "~/Dropbox/forestosmia_saved"
@@ -30,7 +31,7 @@ vegcover <- read.csv(file.path(dir,
 ## ************CLEAN PARASITE DATA AND ADD SUMMARY METRICS**************************************
 
 ## fix site names to match between datasets
-parasite$Stand <- as.character(par.path$Site)
+parasite$Stand <- as.character(parasite$Stand)
 parasite$Stand[parasite$Stand ==
               "norton hill"]  <- "Norton Hill"
 parasite$Stand[parasite$Stand ==
@@ -45,6 +46,10 @@ parasite$Stand[parasite$Stand ==
                  "Bethel vernon"]  <- "Bethel Vernon"
 parasite$Stand[parasite$Stand ==
                  "luckiamute"]  <- "Luckiamute"
+parasite$Stand[parasite$Stand ==
+                 "luckiamate"]  <- "Luckiamute"
+parasite$Stand[parasite$Stand ==
+                 "Luckiamate"]  <- "Luckiamute"
 parasite$Stand[parasite$Stand ==
                  "broken horn"]  <- "Broken Horn"
 parasite$Stand[parasite$Stand ==
@@ -76,7 +81,7 @@ parasite$Stand[parasite$Stand ==
 parasite$Stand[parasite$Stand ==
                  "Reese creek"]  <- "Reese Creek"
 parasite$Stand[parasite$Stand ==
-                 "back grove"]  <- "Back Grove"
+                 "back grove"]  <- "Backgrove"
 parasite$Stand[parasite$Stand ==
                  "bald mountain"]  <- "Bald Mountain"
 parasite$Stand[parasite$Stand ==
@@ -103,42 +108,48 @@ parasite$Stand[parasite$Stand ==
                  "Miller creek"]  <- "Miller Creek"
 parasite$Stand[parasite$Stand ==
                  "Walker camp"]  <- "Walker Camp"
+parasite$Stand[parasite$Stand ==
+                 "Lake lyons"]  <- "Lake Lyons"
+parasite$Stand[parasite$Stand ==
+                 "Gage "]  <- "Gage"
+
+dim(parasite)
+
+## drop the NOTES column
+parasite$NOTES <- NULL
 
 ## drop all the no template controls under UniqueID because they were all neg for parasites
 parasite <- parasite[!parasite$UniqueID == "C",]
+dim(parasite)
 
 ## drop any sample where Apidae isnt 1
-parasite <- parasite[!parasite$ApidaeCtrl == "0",]
+parasite <- parasite[!parasite$ApidaeCtrl == 0,]
+dim(parasite)
 
 ## We may want to compare parasites in unemerged and foraging bees, in which case use "parasitecontrol" object
 ## However, for most analyses, we want to lose the unemerged, control bees, use "parasite"
 parasitecontrol <- parasite
 parasite <- parasitecontrol[!parasitecontrol$Stand == "control",]
+dim(parasite)
 
 ## community health metrics
 parasitenames <- c("Crithidia", "Ascophaera", "Apicystis")
 
 parasite$ParasiteRichness <- rowSums(parasite[,parasitenames])
+
+#### trues/falses times 1 (true is a 1 and false is 0)
 parasite$AnyParasite <- (parasite$ParasiteRichness > 0)*1
 
-## calculate total sick individuals for each site
+## calculate avg sick individuals for each site
+## do this with dplyr instead, check out ffar code (summary) - TO DO
 
-sick.totals <- aggregate(parasite[c(parasitenames)],
-                         list(Stand=parasite$Stand,
-                              UniqueID=parasite$UniqueID),
-                         sum, na.rm=TRUE)
+sick.totals <- parasite %>%
+  group_by(Stand) %>%
+  summarise(TestedTotals = length(UniqueID),
+            ParasitismRate=mean(AnyParasite, na.rm=TRUE),
+            InfectedIndividuals=sum(AnyParasite, na.rm=TRUE))
 
-tested.totals <- aggregate(parasite[c(parasitenames)],
-                           list(Stand=parasite$Stand,
-                                UniqueID=parasite$UniqueID),
-                           function(x) sum(!is.na(x)))
-
-sick.totals$ScreenedPar <- tested.totals$Crithidia
-
-sick.totals[,parasitenames] <-
-  sick.totals[,parasitenames]/sick.totals$ScreenedPar
-
-parasite<- merge(sick.totals, parasite)
+dim(parasite)
 
 ## ************CLEAN VEG COVER DATA, ADD SUMMARY METRICS, MERGE TO PARASITE DATA*********************************
 
@@ -146,49 +157,84 @@ parasite<- merge(sick.totals, parasite)
 vegcover$Stand <- as.character(vegcover$Stand)
 vegcover$Stand[vegcover$Stand ==
                  "Alexander Rd."]  <- "Alexander Rd"
+vegcover$Stand[vegcover$Stand ==
+                 "luckiamate"]  <- "Luckiamute"
+vegcover$Stand[vegcover$Stand ==
+                 "Luckiamate"]  <- "Luckiamute"
+vegcover$Stand[vegcover$Stand ==
+                 "Lake lyons"]  <- "Lake Lyons"
+vegcover$Stand[vegcover$Stand ==
+                 "Hull Oaks"]  <- "Hull Oakes"
+vegcover$Stand[vegcover$Stand ==
+                 "Walker camp"]  <- "Walker Camp"
+
 
 ## calculate stand-level broadleaf cover (stand=site)
 ## 
 ## keep only data for "broadleaf" trees, srubs, and forbs
-vegcover <- vegcover[!vegcover$Broadleaf == "0",]
+## when dropping a variable, check the class with class(vegcover$broadleaf) and if its an integar dont put quotes around 0
+vegcover <- vegcover[!vegcover$Broadleaf == 0,]
 
-## replace "tr" (tracce) with .01
+## replace "tr" (tracce) with 1.00
 vegcover$perCover[vegcover$perCover ==
-                 "tr"]  <- "0.01"
+                 "tr"]  <- "1.0"
 
 vegcover$perCover[vegcover$perCover ==
-                    "TR"]  <- "0.01"
+                    "TR"]  <- "1.0"
+
+vegcover$perCover[vegcover$perCover ==
+                    "Tr"]  <- "1.0"
 
 ## average abundance of broadleaf cover among plots at a site
 
-BLcover.site <- aggregate(list(BLcover=vegcover$perCover), 
-                          list(Stand=vegcover$Stand),
-                          mean)
-                          
+vegcover$perCover<-as.numeric(vegcover$perCover)
 
-## merge with parasite data. 
+BLcover.stand<-tapply(vegcover$perCover,vegcover$Stand,mean,na.rm=TRUE)
 
-allspecdata <- merge(BLcover.site, parasite)
+
+## merge with parasite data. default is a left merge, merging the second obect to the first object 
+
+parasite$standintensity <- BLcover.stand[match(parasite$Stand,names(BLcover.stand))]
+
+##look for any wonky things that didnt merge
+unique(parasite$Stand[is.na(parasite$standintensity)])
+
+
+#FIX THIS -- Luckiamute isnt in the vegcover data. What to do? I emailed Sara
 
 
 ## ************CLEAN STAND INFO DATA, MERGE *********************************
-## merge stand info data onto allspec
+## merge stand info data onto a new object called allspec
 
-##WHY DID I LOSE SO MANY UNIQUE IDs? I should have like 366?
-
-allspecdata <- merge(allspecdata, standinfo)
+allspecdata <- merge(parasite, standinfo)
 colnames(allspecdata)
-allspecdata$NOTES <- NULL
-colnames(allspecdata)
+dim(allspecdata)
 
 ## ************CLEAN DBH DATA, MERGE *********************************
 
 ## let's remove the column "live or dead" since it's not correctly filled out
 dbh$LiveorDead <- NULL
 
-## we want tree species richness, tree species abundance, tree DBH averaged across plots at a site
+## TO DO? assign zeoes and NAs under blanks??
+
+## we want tree species richness, tree species abundance, tree DBH averaged across trees at a site
+
+dbh$DBH<-as.numeric(dbh$DBH)
+DBH.stand<-tapply(dbh$DBH,dbh$Stand,mean,na.rm=TRUE)
+
+dbh$TreeNum<-as.numeric(dbh$TreeNum)
+TreeAbund.stand<-tapply(dbh$TreeNum,dbh$Stand,mean,na.rm=TRUE)
+
+## THIS DIDNT WORK, MAYBE BECAUSE BLANKS? need to count distinct number of tree species at a site
+TreeRichness.stand<-apply(dbh$Species,dbh$Stand,function(x) length(unique(x)), na.rm=TRUE)
 
 ## then merge to dataset
+allspecdata$DBH.stand <- DBH.stand[match(allspecdata$Stand,names(DBH.stand))]
+allspecdata$TreeAbund.stand <- TreeAbund.stand[match(allspecdata$Stand,names(TreeAbund.stand))]
+allspecdata$TreeRichness.stand <- TreeRichness.stand[match(allspecdata$Stand,names(TreeRichness.stand))]
+
+## look for any wonky things that didnt merge for some reason(missing or NA data)
+unique(allspecdata$Stand[is.na(allspecdata$DBH.stand)])
 
 ## ************CLEAN FLORAL DATA, MERGE *********************************
 
@@ -196,9 +242,15 @@ dbh$LiveorDead <- NULL
 
 ## let's drop the column "vials" since it's not correctly filled out
 floral$Vials <- NULL
+floral$Other_flowers <- NULL
+floral$Notes <- NULL
 
-## some ID data missing, I emailed Jim and Sara about how to proceed. 
-## ...Can each observation be assumed to be a distinct plant species?
+#Floral bloom at a stand across transects
+
+floral$Blooms<-as.numeric(floral$Blooms)
+Blooms.stand<-tapply(floral$Blooms,floral$Stand,mean,na.rm=TRUE)
+
+
 
 ## ************CLEAN REPRODUCTIVE DATA, MERGE *********************************
 
@@ -228,3 +280,10 @@ write.csv(par.path, file=file.path(save.dir,
 save.dir.git <- "~/Dropbox/forestosmia/data"
 save(allspecdata,
      file=file.path(save.dir.git, "specimens-complete.Rdata"))
+
+
+#for analysis, do path analysis
+#where is bee richness?
+# stand itensity (broadlaef), dbh, flowers, bee richness -> parasitsm (any parasite, dont use parasite richness) -> reprodcutive output (fecundity of males and females, just try with females)
+# stand itensity 
+# dont try to put the path analyses yet, do one glmm for parasitism, and do one glmm for reproduction, with parasitism in the model for reproduction
