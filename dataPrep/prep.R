@@ -9,7 +9,7 @@ parasite <- read.csv(file.path(dir,
 
 dbh <- read.csv(file.path(dir,
                                "data/dbh.csv"),
-                     stringsAsFactors=FALSE)
+                     stringsAsFactors=FALSE, na.strings=c("","NA"))
 
 floral <- read.csv(file.path(dir,
                                "data/floral.csv"),
@@ -26,6 +26,10 @@ standinfo <- read.csv(file.path(dir,
 vegcover <- read.csv(file.path(dir,
                                 "data/vegcover.csv"),
                       stringsAsFactors=FALSE)
+
+bee <- read.csv(file.path(dir,
+                          "data/beediversity.csv"),
+                stringsAsFactors=FALSE)
 
 
 ## ************CLEAN PARASITE DATA AND ADD SUMMARY METRICS**************************************
@@ -141,7 +145,7 @@ parasite$ParasiteRichness <- rowSums(parasite[,parasitenames])
 parasite$AnyParasite <- (parasite$ParasiteRichness > 0)*1
 
 ## calculate avg sick individuals for each site
-## do this with dplyr instead, check out ffar code (summary) - TO DO
+## do this with dplyr (as in ffar) instead?
 
 sick.totals <- parasite %>%
   group_by(Stand) %>%
@@ -168,10 +172,10 @@ vegcover$Stand[vegcover$Stand ==
 vegcover$Stand[vegcover$Stand ==
                  "Walker camp"]  <- "Walker Camp"
 
-
 ## calculate stand-level broadleaf cover (stand=site)
-## 
+ 
 ## keep only data for "broadleaf" trees, srubs, and forbs
+
 ## when dropping a variable, check the class with class(vegcover$broadleaf) and if its an integar dont put quotes around 0
 vegcover <- vegcover[!vegcover$Broadleaf == 0,]
 
@@ -191,42 +195,61 @@ vegcover$perCover<-as.numeric(vegcover$perCover)
 
 BLcover.stand<-tapply(vegcover$perCover,vegcover$Stand,mean,na.rm=TRUE)
 
-
-## merge with parasite data. default is a left merge, merging the second obect to the first object 
+## add to parasite data as a new variable called stand intensity
+## default is a left merge, merging the second object to the first object 
 
 parasite$standintensity <- BLcover.stand[match(parasite$Stand,names(BLcover.stand))]
 
 ##look for any wonky things that didnt merge
 unique(parasite$Stand[is.na(parasite$standintensity)])
 
-
-#FIX THIS -- Luckiamute isnt in the vegcover data. What to do? I emailed Sara
+#FIX THIS -- Luckiamute isnt in the vegcover data. What to do? I emailed Sara, am waiting
 
 
 ## ************CLEAN STAND INFO DATA, MERGE *********************************
+
 ## merge stand info data onto a new object called allspec
+## default is a left merge, merging the second object to the first object 
 
 allspecdata <- merge(parasite, standinfo)
 colnames(allspecdata)
 dim(allspecdata)
 
+##look for any wonky things that didnt merge
+unique(allspecdata$Stand[is.na(allspecdata$CenterLat)])
+
+
 ## ************CLEAN DBH DATA, MERGE *********************************
 
-## let's remove the column "live or dead" since it's not correctly filled out
+## let's remove the columns that are not correctly filled out
 dbh$LiveorDead <- NULL
+dbh$SlopePerc <- NULL
+dbh$Aspect <- NULL
 
-## TO DO? assign zeoes and NAs under blanks??
+## Right now blanks are assigned as NA, but a blank TreeNum means no trees, which we want to accoun tofr
+## If there's an NA under TreeNum and DBH make it zeroes
+dbh$TreeNum[is.na(dbh$TreeNum)] <- 0
+dbh$DBH[is.na(dbh$DBH)] <- 0
 
 ## we want tree species richness, tree species abundance, tree DBH averaged across trees at a site
 
+# Tree DBH
 dbh$DBH<-as.numeric(dbh$DBH)
 DBH.stand<-tapply(dbh$DBH,dbh$Stand,mean,na.rm=TRUE)
 
+## Tree Abundance:
 dbh$TreeNum<-as.numeric(dbh$TreeNum)
 TreeAbund.stand<-tapply(dbh$TreeNum,dbh$Stand,mean,na.rm=TRUE)
 
-## THIS DIDNT WORK, MAYBE BECAUSE BLANKS? need to count distinct number of tree species at a site
-TreeRichness.stand<-apply(dbh$Species,dbh$Stand,function(x) length(unique(x)), na.rm=TRUE)
+## Tree Richness: need to count distinct number of tree species at a site
+## keep species as NA, potentially drop these rows or this will treat an NA as a tree species
+
+dbh<-dbh[!is.na(dbh$Species), ]
+TreeRichness.stand<-tapply(dbh$Species,dbh$Stand,function(x) length(unique(x)))
+
+## apply is by every row or every column. 
+## tapply is aggregated by one category. 
+## lapply is list apply. 
 
 ## then merge to dataset
 allspecdata$DBH.stand <- DBH.stand[match(allspecdata$Stand,names(DBH.stand))]
@@ -245,24 +268,71 @@ floral$Vials <- NULL
 floral$Other_flowers <- NULL
 floral$Notes <- NULL
 
-#Floral bloom at a stand across transects
+# Floral Richness
+# we don't want zeroes counted as 1 though
+floral$Flower_sci[floral$Flower_sci==0] <- NA
+FlowerRichness.stand<-tapply(floral$Flower_sci,floral$Stand,function(x)length(unique(na.omit(x))))
 
+#merge floral richness
+allspecdata$FlowerRichness.stand <- FlowerRichness.stand[match(allspecdata$Stand,names(FlowerRichness.stand))]
+
+
+#try this if you want to take mean of many variabes together
 floral$Blooms<-as.numeric(floral$Blooms)
-Blooms.stand<-tapply(floral$Blooms,floral$Stand,mean,na.rm=TRUE)
+floral$Stems<-as.numeric(floral$Stems)
+floral$Canopy_cent<-as.numeric(floral$Canopy_cent)
+
+floral.site <- aggregate(list(BloomAbund.stand=floral$Blooms,
+                           StemAbund.stand=floral$Stems,
+                           Canopy.stand=floral$Canopy_cent),
+                      list(Stand=floral$Stand),
+                      mean)
+
+## DO I NEED TO TAKE TRANSECTS INTO ACCOUNT SOMEHOW? 
+## TO DO: SEE HOW I DEALT WITH SAMPLE ROUND FOR BEE DIVERSITY DATA AND TRY THAT
+
+#merge abundance per stand data
+dim(allspecdata)
+allspecdata <- merge(allspecdata, floral.site, all.x=TRUE)
+dim(allspecdata)
+
+## look for any wonky things that didnt merge for some reason(missing or NA data)
+unique(allspecdata$Stand[is.na(allspecdata$DBH.stand)])
 
 
+## ************BEE DIVERSITY DATA, MERGE *********************************
+
+bee$Caste <- NULL
+
+## generate abundance of bees in each sample round 
+AbundBee.SR <- aggregate(list(Abund=bee$Count),
+                           list(Stand=bee$Stand,
+                                SampleRound=bee$Round),
+                           sum)
+
+## average the abundnce of bees in a sample round at a site
+AbundBee.SR.stand <- tapply(AbundBee.SR$Abund,
+                        AbundBee.SR$Stand, mean)
+
+## richness of bees, get rid of zeroes
+bee$GenSp[bee$GenSp=="0 0"] <- NA
+RichBees.stand <- aggregate(list(BeeRichness=bee$GenSp),
+                       list(Site=bee$Stand),
+                       function(x) length(unique(na.omit(x))))
+
+# merge to allspecdata
+dim(allspecdata)
+allspecdata$AbundBee.SR.stand <- AbundBee.SR.stand[match(allspecdata$Stand,names(AbundBee.SR.stand))]
+allspecdata$RichBees.stand <- AbundBee.SR.stand[match(allspecdata$Stand,names(AbundBee.SR.stand))]
+dim(allspecdata)
 
 ## ************CLEAN REPRODUCTIVE DATA, MERGE *********************************
 
 ## want sex ratio, offspring production, foraging trip length
 
-## ************BEE DIVERSE DATA, MERGE *********************************
-
-## I don't have this data yet from them? will calculate wild bee richness and wild bee abundance
-
-
-
 ## *************************************************************
+
+
 ## standardize varaibles in our master dataset, 
 path.variables <- c("BLcover","Acres")
 
