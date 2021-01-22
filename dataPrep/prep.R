@@ -15,7 +15,7 @@ floral <- read.csv(file.path(dir,
                                "data/floral.csv"),
                      stringsAsFactors=FALSE)
 
-reproductive <- read.csv(file.path(dir,
+repro <- read.csv(file.path(dir,
                                "data/reproductive.csv"),
                      stringsAsFactors=FALSE)
 
@@ -203,7 +203,7 @@ parasite$standintensity <- BLcover.stand[match(parasite$Stand,names(BLcover.stan
 ##look for any wonky things that didnt merge
 unique(parasite$Stand[is.na(parasite$standintensity)])
 
-#FIX THIS -- Luckiamute isnt in the vegcover data. What to do? I emailed Sara, am waiting
+#FIX THIS -- Luckiamute isnt in the vegcover data. What to do? They don't have data from that site, I asked Sara. 
 
 
 ## ************CLEAN STAND INFO DATA, MERGE *********************************
@@ -226,8 +226,8 @@ dbh$LiveorDead <- NULL
 dbh$SlopePerc <- NULL
 dbh$Aspect <- NULL
 
-## Right now blanks are assigned as NA, but a blank TreeNum means no trees, which we want to accoun tofr
-## If there's an NA under TreeNum and DBH make it zeroes
+## Right now blanks are assigned as NA, but a blank TreeNum means no trees, which we actually want to account for
+## If there's an NA under TreeNum and DBH, make it zeroes
 dbh$TreeNum[is.na(dbh$TreeNum)] <- 0
 dbh$DBH[is.na(dbh$DBH)] <- 0
 
@@ -276,29 +276,52 @@ FlowerRichness.stand<-tapply(floral$Flower_sci,floral$Stand,function(x)length(un
 #merge floral richness
 allspecdata$FlowerRichness.stand <- FlowerRichness.stand[match(allspecdata$Stand,names(FlowerRichness.stand))]
 
+#take mean of many variabes together for each stand, this code doesnt take transect into account
+#floral$Blooms<-as.numeric(floral$Blooms)
+#floral$Stems<-as.numeric(floral$Stems)
+#floral$Canopy_cent<-as.numeric(floral$Canopy_cent)
 
-#try this if you want to take mean of many variabes together
-floral$Blooms<-as.numeric(floral$Blooms)
-floral$Stems<-as.numeric(floral$Stems)
-floral$Canopy_cent<-as.numeric(floral$Canopy_cent)
+#floral.site <- aggregate(list(BloomAbund.stand=floral$Blooms,
+#                           StemAbund.stand=floral$Stems,
+#                           Canopy.stand=floral$Canopy_cent),
+#                      list(Stand=floral$Stand),
+#                      mean)
 
-floral.site <- aggregate(list(BloomAbund.stand=floral$Blooms,
-                           StemAbund.stand=floral$Stems,
-                           Canopy.stand=floral$Canopy_cent),
-                      list(Stand=floral$Stand),
-                      mean)
+# take mean of floral variables across each stand, this code takes transect into account
+## I DIDNT DO THIS FOR FLORAL RICHNESS THOUGH BUT I THINK THATS OK
 
-## DO I NEED TO TAKE TRANSECTS INTO ACCOUNT SOMEHOW? 
-## TO DO: SEE HOW I DEALT WITH SAMPLE ROUND FOR BEE DIVERSITY DATA AND TRY THAT
+floral.SR <- aggregate(list(BloomAbund.stand=floral$Blooms,
+                              StemAbund.stand=floral$Stems,
+                              Canopy.stand=floral$Canopy_cent),
+                         list(Stand=floral$Stand,
+                              SampleRound=floral$Transect),
+                         sum)
 
-#merge abundance per stand data
+## average the abundnce of floral features a sample round at a site
+BloomAbund.SR.stand <- tapply(floral.SR$BloomAbund.stand,
+                          floral.SR$Stand, mean)
+
+StemAbund.SR.stand <- tapply(floral.SR$StemAbund.stand,
+                              floral.SR$Stand, mean)
+
+Canopy.stand.SR.stand <- tapply(floral.SR$Canopy.stand,
+                              floral.SR$Stand, mean)
+
+#merge abundance per stand data (USE THIS IF we arent averaging across transect)
+#dim(allspecdata)
+#allspecdata <- merge(allspecdata, floral.site, all.x=TRUE)
+#dim(allspecdata)
+
+#merge abundance per stand data (USE THIS IF we average across transect)
 dim(allspecdata)
-allspecdata <- merge(allspecdata, floral.site, all.x=TRUE)
+allspecdata$BloomAbund.SR.stand <- BloomAbund.SR.stand[match(allspecdata$Stand,names(BloomAbund.SR.stand))]
+allspecdata$StemAbund.SR.stand <- StemAbund.SR.stand[match(allspecdata$Stand,names(StemAbund.SR.stand))]
+allspecdata$Canopy.SR.stand <- Canopy.stand.SR.stand[match(allspecdata$Stand,names(Canopy.stand.SR.stand))]
 dim(allspecdata)
 
 ## look for any wonky things that didnt merge for some reason(missing or NA data)
-unique(allspecdata$Stand[is.na(allspecdata$DBH.stand)])
-
+unique(allspecdata$Stand[is.na(allspecdata$BloomAbund.SR.stand)])
+unique(allspecdata$Stand[is.na(allspecdata$FlowerRichness.stand)])
 
 ## ************BEE DIVERSITY DATA, MERGE *********************************
 
@@ -317,24 +340,59 @@ AbundBee.SR.stand <- tapply(AbundBee.SR$Abund,
 ## richness of bees, get rid of zeroes
 bee$GenSp[bee$GenSp=="0 0"] <- NA
 RichBees.stand <- aggregate(list(BeeRichness=bee$GenSp),
-                       list(Site=bee$Stand),
+                       list(Stand=bee$Stand),
                        function(x) length(unique(na.omit(x))))
 
 # merge to allspecdata
 dim(allspecdata)
 allspecdata$AbundBee.SR.stand <- AbundBee.SR.stand[match(allspecdata$Stand,names(AbundBee.SR.stand))]
-allspecdata$RichBees.stand <- AbundBee.SR.stand[match(allspecdata$Stand,names(AbundBee.SR.stand))]
+
+#GET AN ERROR??! NOT SURE WHY
+allspecdata$RichBees.stand <- RichBees.stand[match(allspecdata$Stand,names(RichBees.stand))]
 dim(allspecdata)
 
 ## ************CLEAN REPRODUCTIVE DATA, MERGE *********************************
 
-## want sex ratio, offspring production, foraging trip length
+## average number of Females at a stand, by nest number
+## average female:totalcocoons ratio (Fem_Total_Ratio) at a stand, by nest number (NestNum)
+
+#first i **THINK** we want to drop samples that are NA for Fem_Total_Ratio 
+repro<-repro[!is.na(repro$Fem_Total_Ratio), ]
+
+repro.nest <- aggregate(list(females.stand=repro$Females,
+                            femalesRatio.stand=repro$Fem_Total_Ratio),
+                       list(Stand=repro$Stand,
+                            SampleRound=repro$NestNum),
+                       sum)
+
+## average the abundnce of floral features a sample round at a site
+femalesLaid.nest.stand <- tapply(repro.nest$females.stand,
+                                 repro.nest$Stand, mean)
+
+femalesLaidratio.nest.stand <- tapply(repro.nest$femalesRatio,
+                                      repro.nest$Stand, mean)
+
+#merge it
+dim(allspecdata)
+allspecdata$femalesLaid.nest.stand  <- femalesLaid.nest.stand[match(allspecdata$Stand,names(femalesLaid.nest.stand))]
+allspecdata$femalesLaidratio.nest.stand <- femalesLaidratio.nest.stand[match(allspecdata$Stand,names(femalesLaidratio.nest.stand))]
+dim(allspecdata)
+unique(colnames(allspecdata))
+
+# IS THERE ANYTHING ELSE I CAN DO WITH REPRODUCTIVE DATA THAT IM MISSING?
+# I could maybe try to match an individual mom with her reproductive output, right now I used stand-averages
 
 ## *************************************************************
 
 
-## standardize varaibles in our master dataset, 
-path.variables <- c("BLcover","Acres")
+## standardize varaibles in our master dataset
+## right now this doesnt work cause "RichBees.SR.stand" isnt merged on yet
+
+path.variables <- c("ParasiteRichness","AnyParasite","standintensity","Acres",
+                    "Age","Elev","CenterLat","CenterLon","DBH.stand","TreeAbund.stand",
+                    "TreeRichness.stand","FlowerRichness.stand","BloomAbund.SR.stand",
+                    "Stemabund.SR.stand","Canopy.SR.stand","AbundBee.SR.stand",
+                    "RichBees.SR.stand","femalesLaid.nest.stand","femalesLaidratio.nest.stand" )
 
 standardize <- function(x)
   (x-mean(x, na.rm=TRUE))/sd(x, na.rm=TRUE)
@@ -344,7 +402,7 @@ allspecdata[,path.variables] <- apply(allspecdata[,path.variables], 2,
 
 ## *************************************************************
 ## write out final data
-write.csv(par.path, file=file.path(save.dir,
+write.csv(allspecdata, file=file.path(save.dir,
                                    "specimens-complete.csv"), row.names=FALSE)
 
 save.dir.git <- "~/Dropbox/forestosmia/data"
