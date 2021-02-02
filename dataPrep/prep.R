@@ -33,89 +33,7 @@ bee <- read.csv(file.path(dir,
 
 
 ## ************CLEAN PARASITE DATA AND ADD SUMMARY METRICS**************************************
-
-## fix site names to match between datasets
-parasite$Stand <- as.character(parasite$Stand)
-parasite$Stand[parasite$Stand ==
-              "norton hill"]  <- "Norton Hill"
-parasite$Stand[parasite$Stand ==
-                 "Norton hill"]  <- "Norton Hill"
-parasite$Stand[parasite$Stand ==
-                 "buttermilk creek"]  <- "Buttermilk Creek"
-parasite$Stand[parasite$Stand ==
-                 "lake lyons"]  <- "Lake Lyons"
-parasite$Stand[parasite$Stand ==
-                 "bethel vernon"]  <- "Bethel Vernon"
-parasite$Stand[parasite$Stand ==
-                 "Bethel vernon"]  <- "Bethel Vernon"
-parasite$Stand[parasite$Stand ==
-                 "luckiamute"]  <- "Luckiamute"
-parasite$Stand[parasite$Stand ==
-                 "luckiamate"]  <- "Luckiamute"
-parasite$Stand[parasite$Stand ==
-                 "Luckiamate"]  <- "Luckiamute"
-parasite$Stand[parasite$Stand ==
-                 "broken horn"]  <- "Broken Horn"
-parasite$Stand[parasite$Stand ==
-                 "black rock"]  <- "Black Rock"
-parasite$Stand[parasite$Stand ==
-                 "haybarn"]  <- "Haybarn"
-parasite$Stand[parasite$Stand ==
-                 "cougar ridge"]  <- "Cougar Ridge"
-parasite$Stand[parasite$Stand ==
-                 "miller creek"]  <- "Miller Creek"
-parasite$Stand[parasite$Stand ==
-                 "wild cab"]  <- "Wild Cab"
-parasite$Stand[parasite$Stand ==
-                 "gage"]  <- "Gage"
-parasite$Stand[parasite$Stand ==
-                 "elk city"]  <- "Elk City"
-parasite$Stand[parasite$Stand ==
-                 "south fork"]  <- "South Fork"
-parasite$Stand[parasite$Stand ==
-                 "hull oakes"]  <- "Hull Oakes"
-parasite$Stand[parasite$Stand ==
-                 "walker camp"]  <- "Walker Camp"
-parasite$Stand[parasite$Stand ==
-                 "hatchery falls"]  <- "Hatchery Falls"
-parasite$Stand[parasite$Stand ==
-                 "bow season"]  <- "Bow Season"
-parasite$Stand[parasite$Stand ==
-                 "sheythe"]  <- "Sheythe"
-parasite$Stand[parasite$Stand ==
-                 "Reese creek"]  <- "Reese Creek"
-parasite$Stand[parasite$Stand ==
-                 "back grove"]  <- "Backgrove"
-parasite$Stand[parasite$Stand ==
-                 "bald mountain"]  <- "Bald Mountain"
-parasite$Stand[parasite$Stand ==
-                 "snag"]  <- "Snag"
-parasite$Stand[parasite$Stand ==
-                 "logsden"]  <- "Logsden"
-parasite$Stand[parasite$Stand ==
-                 "Paul mort."]  <- "Paul Mortenson"
-parasite$Stand[parasite$Stand ==
-                 "Cougar ridge"]  <- "Cougar Ridge"
-parasite$Stand[parasite$Stand ==
-                 "Bigrock"]  <- "Big Rock Creek"
-parasite$Stand[parasite$Stand ==
-                 "Buttermilk"]  <- "Buttermilk Creek"
-parasite$Stand[parasite$Stand ==
-                 "Broken horn"]  <- "Broken Horn"
-parasite$Stand[parasite$Stand ==
-                 "Wolf cab"]  <- "Wolf Cabin"
-parasite$Stand[parasite$Stand ==
-                 "wolf cab"]  <- "Wolf Cabin"
-parasite$Stand[parasite$Stand ==
-                 "Wolf cabin"]  <- "Wolf Cabin"
-parasite$Stand[parasite$Stand ==
-                 "Miller creek"]  <- "Miller Creek"
-parasite$Stand[parasite$Stand ==
-                 "Walker camp"]  <- "Walker Camp"
-parasite$Stand[parasite$Stand ==
-                 "Lake lyons"]  <- "Lake Lyons"
-parasite$Stand[parasite$Stand ==
-                 "Gage "]  <- "Gage"
+source("../forestosmia/dataPrep/src/siteNames.R")
 
 dim(parasite)
 
@@ -157,23 +75,8 @@ dim(parasite)
 
 ## ************CLEAN VEG COVER DATA, ADD SUMMARY METRICS, MERGE TO PARASITE DATA*********************************
 
-## fix site names to match between datasets
-vegcover$Stand <- as.character(vegcover$Stand)
-vegcover$Stand[vegcover$Stand ==
-                 "Alexander Rd."]  <- "Alexander Rd"
-vegcover$Stand[vegcover$Stand ==
-                 "luckiamate"]  <- "Luckiamute"
-vegcover$Stand[vegcover$Stand ==
-                 "Luckiamate"]  <- "Luckiamute"
-vegcover$Stand[vegcover$Stand ==
-                 "Lake lyons"]  <- "Lake Lyons"
-vegcover$Stand[vegcover$Stand ==
-                 "Hull Oaks"]  <- "Hull Oakes"
-vegcover$Stand[vegcover$Stand ==
-                 "Walker camp"]  <- "Walker Camp"
-
 ## calculate stand-level broadleaf cover (stand=site)
- 
+
 ## keep only data for "broadleaf" trees, srubs, and forbs
 
 ## when dropping a variable, check the class with class(vegcover$broadleaf) and if its an integar dont put quotes around 0
@@ -196,27 +99,38 @@ vegcover$perCover<-as.numeric(vegcover$perCover)
 BLcover.stand<-tapply(vegcover$perCover,vegcover$Stand,mean,na.rm=TRUE)
 
 ## add to parasite data as a new variable called stand intensity
-## default is a left merge, merging the second object to the first object 
+## default is a left merge, merging the second object to the first object
 
-parasite$standintensity <- BLcover.stand[match(parasite$Stand,names(BLcover.stand))]
-
-##look for any wonky things that didnt merge
-unique(parasite$Stand[is.na(parasite$standintensity)])
-
-#FIX THIS -- Luckiamute isnt in the vegcover data. What to do? They don't have data from that site, I asked Sara. 
-
-
-## ************CLEAN STAND INFO DATA, MERGE *********************************
-
-## merge stand info data onto a new object called allspec
-## default is a left merge, merging the second object to the first object 
-
-allspecdata <- merge(parasite, standinfo)
-colnames(allspecdata)
-dim(allspecdata)
+## parasite$standintensity <- BLcover.stand[match(parasite$Stand,names(BLcover.stand))]
 
 ##look for any wonky things that didnt merge
-unique(allspecdata$Stand[is.na(allspecdata$CenterLat)])
+## unique(parasite$Stand[is.na(parasite$standintensity)])
+
+## #FIX THIS -- Luckiamute isnt in the vegcover data. What to do? They don't have data from that site, I asked Sara.
+
+## ## drop Luckiamute
+## parasite <- parasite[parasite$Stand != "Luckiamute", ]
+## standinfo <- standinfo[standinfo$Stand != "Luckiamute", ]
+
+## ## ************CLEAN STAND INFO DATA, MERGE *********************************
+
+## merge  stand and stand intensity
+standinfo$standintensity <- BLcover.stand[match(standinfo$Stand,
+                                                names(BLcover.stand))]
+
+
+
+
+## ## merge stand info data onto a new object called allspec
+## ## default is a left merge, merging the second object to the first object
+
+## allspecdata <- merge(parasite, standinfo)
+## colnames(allspecdata)
+## dim(allspecdata)
+## sort(unique(allspecdata$Stand))
+
+## ##look for any wonky things that didnt merge
+## unique(allspecdata$Stand[is.na(allspecdata$CenterLat)])
 
 
 ## ************CLEAN DBH DATA, MERGE *********************************
@@ -235,33 +149,43 @@ dbh$DBH[is.na(dbh$DBH)] <- 0
 
 # Tree DBH
 dbh$DBH<-as.numeric(dbh$DBH)
-DBH.stand<-tapply(dbh$DBH,dbh$Stand,mean,na.rm=TRUE)
+DBH.stand<-tapply(dbh$DBH, dbh$Stand,mean,na.rm=TRUE)
 
 ## Tree Abundance:
-dbh$TreeNum<-as.numeric(dbh$TreeNum)
-TreeAbund.stand<-tapply(dbh$TreeNum,dbh$Stand,mean,na.rm=TRUE)
+dbh$TreeNum <- as.numeric(dbh$TreeNum)
+TreeAbund.stand <- tapply(dbh$TreeNum,dbh$Stand,mean,na.rm=TRUE)
 
 ## Tree Richness: need to count distinct number of tree species at a site
 ## keep species as NA, potentially drop these rows or this will treat an NA as a tree species
 
-dbh<-dbh[!is.na(dbh$Species), ]
-TreeRichness.stand<-tapply(dbh$Species,dbh$Stand,function(x) length(unique(x)))
-
-## apply is by every row or every column. 
-## tapply is aggregated by one category. 
-## lapply is list apply. 
+dbh <- dbh[!is.na(dbh$Species), ]
+TreeRichness.stand <- tapply(dbh$Species,dbh$Stand,function(x) length(unique(x)))
 
 ## then merge to dataset
-allspecdata$DBH.stand <- DBH.stand[match(allspecdata$Stand,names(DBH.stand))]
-allspecdata$TreeAbund.stand <- TreeAbund.stand[match(allspecdata$Stand,names(TreeAbund.stand))]
-allspecdata$TreeRichness.stand <- TreeRichness.stand[match(allspecdata$Stand,names(TreeRichness.stand))]
+standinfo$MeanDBH <- DBH.stand[match(standinfo$Stand,
+                                       names(DBH.stand))]
+standinfo$TreeAbund <- TreeAbund.stand[match(standinfo$Stand,
+                                       names(TreeAbund.stand))]
+standinfo$TreeRichness <- TreeRichness.stand[match(standinfo$Stand,
+                                       names(TreeRichness.stand))]
 
-## look for any wonky things that didnt merge for some reason(missing or NA data)
-unique(allspecdata$Stand[is.na(allspecdata$DBH.stand)])
+
+
+## apply is by every row or every column.
+## tapply is aggregated by one category.
+## lapply is list apply.
+
+## ## then merge to dataset
+## allspecdata$DBH.stand <- DBH.stand[match(allspecdata$Stand,names(DBH.stand))]
+## allspecdata$TreeAbund.stand <- TreeAbund.stand[match(allspecdata$Stand,names(TreeAbund.stand))]
+## allspecdata$TreeRichness.stand <- TreeRichness.stand[match(allspecdata$Stand,names(TreeRichness.stand))]
+
+## ## look for any wonky things that didnt merge for some reason(missing or NA data)
+## unique(allspecdata$Stand[is.na(allspecdata$DBH.stand)])
 
 ## ************CLEAN FLORAL DATA, MERGE *********************************
 
-## we want abundance flowers (abundflw), richness flowering species (richnessflwingsp), and abundfloweringsp 
+## we want abundance flowers (abundflw), richness flowering species (richnessflwingsp), and abundfloweringsp
 
 ## let's drop the column "vials" since it's not correctly filled out
 floral$Vials <- NULL
@@ -271,10 +195,12 @@ floral$Notes <- NULL
 # Floral Richness
 # we don't want zeroes counted as 1 though
 floral$Flower_sci[floral$Flower_sci==0] <- NA
-FlowerRichness.stand<-tapply(floral$Flower_sci,floral$Stand,function(x)length(unique(na.omit(x))))
+FlowerRichness.stand<-tapply(floral$Flower_sci,floral$Stand,
+                             function(x) length(unique(na.omit(x))))
 
 #merge floral richness
-allspecdata$FlowerRichness.stand <- FlowerRichness.stand[match(allspecdata$Stand,names(FlowerRichness.stand))]
+standinfo$FlowerRichness <- FlowerRichness.stand[match(standinfo$Stand,
+                                          names(FlowerRichness.stand))]
 
 #take mean of many variabes together for each stand, this code doesnt take transect into account
 #floral$Blooms<-as.numeric(floral$Blooms)
@@ -295,17 +221,17 @@ floral.SR <- aggregate(list(BloomAbund.stand=floral$Blooms,
                               Canopy.stand=floral$Canopy_cent),
                          list(Stand=floral$Stand,
                               SampleRound=floral$Transect),
-                         sum)
+                         sum, na.rm=TRUE)
 
 ## average the abundnce of floral features a sample round at a site
 BloomAbund.SR.stand <- tapply(floral.SR$BloomAbund.stand,
-                          floral.SR$Stand, mean)
+                          floral.SR$Stand, mean,  na.rm=TRUE)
 
 StemAbund.SR.stand <- tapply(floral.SR$StemAbund.stand,
-                              floral.SR$Stand, mean)
+                              floral.SR$Stand, mean,  na.rm=TRUE)
 
 Canopy.stand.SR.stand <- tapply(floral.SR$Canopy.stand,
-                              floral.SR$Stand, mean)
+                              floral.SR$Stand, mean,  na.rm=TRUE)
 
 #merge abundance per stand data (USE THIS IF we arent averaging across transect)
 #dim(allspecdata)
@@ -313,29 +239,36 @@ Canopy.stand.SR.stand <- tapply(floral.SR$Canopy.stand,
 #dim(allspecdata)
 
 #merge abundance per stand data (USE THIS IF we average across transect)
-dim(allspecdata)
-allspecdata$BloomAbund.SR.stand <- BloomAbund.SR.stand[match(allspecdata$Stand,names(BloomAbund.SR.stand))]
-allspecdata$StemAbund.SR.stand <- StemAbund.SR.stand[match(allspecdata$Stand,names(StemAbund.SR.stand))]
-allspecdata$Canopy.SR.stand <- Canopy.stand.SR.stand[match(allspecdata$Stand,names(Canopy.stand.SR.stand))]
-dim(allspecdata)
+
+standinfo$MeanBloomAbund <- BloomAbund.SR.stand[match(standinfo$Stand,
+                                          names(BloomAbund.SR.stand))]
+
+standinfo$MeanStemAbund <- StemAbund.SR.stand[match(standinfo$Stand,
+                                         names(StemAbund.SR.stand))]
+
+standinfo$MeanCanopy <- Canopy.stand.SR.stand[match(standinfo$Stand,
+                                      names(Canopy.stand.SR.stand))]
+
+dim(standinfo)
 
 ## look for any wonky things that didnt merge for some reason(missing or NA data)
-unique(allspecdata$Stand[is.na(allspecdata$BloomAbund.SR.stand)])
-unique(allspecdata$Stand[is.na(allspecdata$FlowerRichness.stand)])
+unique(standinfo$Stand[is.na(standinfo$MeanBloomAbund)])
+unique(standinfo$Stand[is.na(standinfo$FlowerRichness)])
 
 ## ************BEE DIVERSITY DATA, MERGE *********************************
+## TBA WHICH ESTIMATE SHOULD BE USE FOR THE NESTS/PARASITES, THE MEAN OVER THE SEASON OR THE CLOSEST SAMPLE ROUND, OR THE AVERAGE OVER THE FRIST 2
 
 bee$Caste <- NULL
 
-## generate abundance of bees in each sample round 
+## generate abundance of bees in each sample round
 AbundBee.SR <- aggregate(list(Abund=bee$Count),
                            list(Stand=bee$Stand,
-                                SampleRound=bee$Round),
-                           sum)
+                                Round=bee$Round),
+                           sum, na.rm=TRUE)
 
 ## average the abundnce of bees in a sample round at a site
 AbundBee.SR.stand <- tapply(AbundBee.SR$Abund,
-                        AbundBee.SR$Stand, mean)
+                        AbundBee.SR$Stand, mean,  na.rm=TRUE)
 
 ## richness of bees, get rid of zeroes
 bee$GenSp[bee$GenSp=="0 0"] <- NA
@@ -344,74 +277,114 @@ RichBees.stand <- aggregate(list(BeeRichness=bee$GenSp),
                        function(x) length(unique(na.omit(x))))
 
 # merge to allspecdata
-dim(allspecdata)
-allspecdata$AbundBee.SR.stand <- AbundBee.SR.stand[match(allspecdata$Stand,names(AbundBee.SR.stand))]
+standinfo$MeanAbundBee <- AbundBee.SR.stand[
+    match(standinfo$Stand, names(AbundBee.SR.stand))]
 
 #GET AN ERROR??! NOT SURE WHY
-allspecdata$RichBees.stand <- RichBees.stand[match(allspecdata$Stand,names(RichBees.stand))]
-dim(allspecdata)
+standinfo$RichnessBees <- RichBees.stand$BeeRichness[
+                                match(standinfo$Stand,
+                                RichBees.stand$Stand)]
+
+
+
 
 ## ************CLEAN REPRODUCTIVE DATA, MERGE *********************************
 
-## average number of Females at a stand, by nest number
-## average female:totalcocoons ratio (Fem_Total_Ratio) at a stand, by nest number (NestNum)
+## average number of Females/Males at a stand, by nest number
+colnames(repro)[colnames(repro) == "NestNum"] <- "Column"
 
-#first i **THINK** we want to drop samples that are NA for Fem_Total_Ratio 
-repro<-repro[!is.na(repro$Fem_Total_Ratio), ]
+repro$BlockNestTube  <- paste0(repro$Block, repro$Row, repro$Column)
+parasite$BlockNestTube  <- paste0(parasite$Block,
+                                     parasite$Nest)
 
-repro.nest <- aggregate(list(females.stand=repro$Females,
-                            femalesRatio.stand=repro$Fem_Total_Ratio),
+repro$SumOffspring <- repro$Females + repro$Males
+
+## BLOCK LEVEL DATA ********
+
+repro.nest <- aggregate(list(Females=repro$Females,
+                             Males=repro$Males),
                        list(Stand=repro$Stand,
-                            SampleRound=repro$NestNum),
-                       sum)
+                            Block=repro$Block),
+                       sum, na.rm=TRUE)
 
-## average the abundnce of floral features a sample round at a site
-femalesLaid.nest.stand <- tapply(repro.nest$females.stand,
-                                 repro.nest$Stand, mean)
+## above 1 F > M, below 1 M>F, = 1 M=F
+repro.nest$FM_ratio <-  log(repro.nest$Females +1)/log(repro.nest$Males +1)
 
-femalesLaidratio.nest.stand <- tapply(repro.nest$femalesRatio,
-                                      repro.nest$Stand, mean)
+repro.nest$SumOffspring <-  repro.nest$Females + repro.nest$Males
 
-#merge it
-dim(allspecdata)
-allspecdata$femalesLaid.nest.stand  <- femalesLaid.nest.stand[match(allspecdata$Stand,names(femalesLaid.nest.stand))]
-allspecdata$femalesLaidratio.nest.stand <- femalesLaidratio.nest.stand[match(allspecdata$Stand,names(femalesLaidratio.nest.stand))]
-dim(allspecdata)
-unique(colnames(allspecdata))
 
-# IS THERE ANYTHING ELSE I CAN DO WITH REPRODUCTIVE DATA THAT IM MISSING?
-# I could maybe try to match an individual mom with her reproductive output, right now I used stand-averages
+## block level data with stand info merged
+
+repro.nest <- merge(repro.nest, standinfo)
+
+## INDIVIDUAL LEVEL DATA ********
+## an merge tube level data to the patasite data mom
+
+parasite$Females <- repro$Females[match(
+                                   paste(parasite$BlockNestTube,
+                                              parasite$Stand),
+                                        paste(repro$BlockNestTube,
+                                              repro$Stand))]
+
+parasite$Males <- repro$Males[match(
+                                   paste(parasite$BlockNestTube,
+                                              parasite$Stand),
+                                        paste(repro$BlockNestTube,
+                                              repro$Stand))]
+
+parasite$SumOffspring <- repro$SumOffspring[match(
+                                   paste(parasite$BlockNestTube,
+                                              parasite$Stand),
+                                        paste(repro$BlockNestTube,
+                                              repro$Stand))]
 
 ## *************************************************************
-
+## HC mve to analysis
 
 ## standardize varaibles in our master dataset
 ## right now this doesnt work cause "RichBees.SR.stand" isnt merged on yet
 
-path.variables <- c("ParasiteRichness","AnyParasite","standintensity","Acres",
-                    "Age","Elev","CenterLat","CenterLon","DBH.stand","TreeAbund.stand",
-                    "TreeRichness.stand","FlowerRichness.stand","BloomAbund.SR.stand",
-                    "Stemabund.SR.stand","Canopy.SR.stand","AbundBee.SR.stand",
-                    "RichBees.SR.stand","femalesLaid.nest.stand","femalesLaidratio.nest.stand" )
+## path.variables <- c("ParasiteRichness","AnyParasite","standintensity","Acres",
+##                     "Age","Elev","CenterLat","CenterLon","DBH.stand","TreeAbund.stand",
+##                     "TreeRichness.stand","FlowerRichness.stand","BloomAbund.SR.stand",
+##                     "Stemabund.SR.stand","Canopy.SR.stand","AbundBee.SR.stand",
+##                     "RichBees.SR.stand","femalesLaid.nest.stand","femalesLaidratio.nest.stand" )
 
-standardize <- function(x)
-  (x-mean(x, na.rm=TRUE))/sd(x, na.rm=TRUE)
+## standardize <- function(x)
+##   (x-mean(x, na.rm=TRUE))/sd(x, na.rm=TRUE)
 
-allspecdata[,path.variables] <- apply(allspecdata[,path.variables], 2,
-                                      standardize)
+## allspecdata[,path.variables] <- apply(allspecdata[,path.variables], 2,
+##                                       standardize)
+
+## *************************************************************
+## merge parasite and stand info
+dim(parasite)
+parasite <- merge(parasite, standinfo)
+dim(parasite)
 
 ## *************************************************************
 ## write out final data
-write.csv(allspecdata, file=file.path(save.dir,
-                                   "specimens-complete.csv"), row.names=FALSE)
 
-save.dir.git <- "~/Dropbox/forestosmia/data"
-save(allspecdata,
-     file=file.path(save.dir.git, "specimens-complete.Rdata"))
+write.csv(parasite, file=file.path(dir,
+                     "cleanedData/parasite.csv"), row.names=FALSE)
+
+write.csv(standinfo, file=file.path(dir,
+                     "cleanedData/standinfo.csv"), row.names=FALSE)
+
+
+write.csv(repro.nest, file=file.path(dir,
+                     "cleanedData/NestRepro.csv"), row.names=FALSE)
+
+save.dir <- "~/Dropbox/forestosmia"
+save(parasite,
+     file=file.path(save.dir, "data/parasite.Rdata"))
+
+save(repro.nest,
+     file=file.path(save.dir, "data/NestRepro.Rdata"))
 
 
 #for analysis, do path analysis
 #where is bee richness?
 # stand itensity (broadlaef), dbh, flowers, bee richness -> parasitsm (any parasite, dont use parasite richness) -> reprodcutive output (fecundity of males and females, just try with females)
-# stand itensity 
+# stand itensity
 # dont try to put the path analyses yet, do one glmm for parasitism, and do one glmm for reproduction, with parasitism in the model for reproduction
