@@ -2,6 +2,7 @@ rm(list=ls())
 library(dplyr)
 ## prepares raw data and creates dataset for analyses
 
+setwd("~/Dropbox/forestosmia_saved")
 dir <- "~/Dropbox/forestosmia_saved"
 parasite <- read.csv(file.path(dir,
                            "data/parasite.csv"),
@@ -364,23 +365,23 @@ dim(parasite)
 
 ## *************************************************************
 ## write out final data
-
+dir <- "~/Dropbox/forestosmia_saved/cleaneddata"
 write.csv(parasite, file=file.path(dir,
-                     "cleanedData/parasite.csv"), row.names=FALSE)
+                     "parasite.csv"), row.names=FALSE)
 
 write.csv(standinfo, file=file.path(dir,
-                     "cleanedData/standinfo.csv"), row.names=FALSE)
+                     "standinfo.csv"), row.names=FALSE)
 
 
 write.csv(repro.nest, file=file.path(dir,
-                     "cleanedData/NestRepro.csv"), row.names=FALSE)
+                     "NestRepro.csv"), row.names=FALSE)
 
-save.dir <- "~/Dropbox/forestosmia"
+save.dir <- "~/Dropbox/forestosmia/data"
 save(parasite,
-     file=file.path(save.dir, "data/parasite.Rdata"))
+     file=file.path(save.dir, "parasite.Rdata"))
 
 save(repro.nest,
-     file=file.path(save.dir, "data/NestRepro.Rdata"))
+     file=file.path(save.dir, "NestRepro.Rdata"))
 
 
 #for analysis, do path analysis
