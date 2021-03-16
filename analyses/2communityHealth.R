@@ -4,7 +4,8 @@ rm(list=ls())
 library(piecewiseSEM)
 library(lme4)
 
-load("../data/parasite.Rdata")
+load("../data/indivData.Rdata")
+load("../data/siteData.Rdata")
 load("../data/NestRepro.Rdata")
 
 
@@ -14,46 +15,102 @@ load("../data/NestRepro.Rdata")
 
 ## formula for site effects on the bee community
 
-formula.bee <- formula(AnyParasite~ standintensity +
-                                    MeanDBH + TreeRichness  + FlowerRichness)
+## site.data <- site.data[!is.na(site.data$InfectedIndividuals),]
 
+formula.bee <- formula(MeanBeeRichness ~
+                           scale(standintensity) +
+                           scale(MeanCanopy) + scale(TreeRichness)  +
+                           scale(MeanBloomAbund) +    scale(MeanDBH) +
+                            scale(FlowerRichness) + scale(Acres))
+
+summary(lm(formula.bee,
+           data = site.data))
+
+
+## *****
+
+formula.bee <- formula(MeanBeeAbund ~
+                           scale(standintensity) +
+                           scale(MeanCanopy) + scale(TreeRichness)  +
+                           scale(MeanBloomAbund) +    scale(MeanDBH) +
+                            scale(FlowerRichness) + scale(Acres))
+
+summary(lm(formula.bee,
+           data = site.data))
+
+## *****
+
+formula.parasite <- formula(cbind(InfectedIndividuals,
+                                  TestedTotals)~
+                                scale(MeanBeeRichness)+
+                                scale(standintensity) +
+                                scale(MeanDBH) + scale(TreeRichness)  + scale(Acres))
+
+
+parasite.mod <-  glm(formula.parasite,
+                     data = site.data,
+                     family="binomial")
+summary(parasite.mod)
+vif(parasite.mod)
+
+## *****
 ## formulas for the site effects on nest reproductiom
 
-ys <- c("FM_ratio", "SumOffspring")
-xvar.NestRepro <- c("AnyParasite",
-                   "standintensity",
-                   "MeanDBH",
-                   "TreeRichness",
-                   "FlowerRichness")
+ys <- c("FM_ratio", "SumOffspring", "Females")
+
+xvar.NestRepro <- c("scale(ParasitismRate)",
+                    "scale(MeanBeeAbund)",
+                    "scale(standintensity)",
+                    "scale(MeanCanopy)", "scale(TreeRichness)",
+                    "scale(MeanBloomAbund)", "scale(MeanDBH)",
+                    "scale(FlowerRichness)", "scale(Acres)")
+
+
 
 formulas.NestRepro <-lapply(ys, function(x) {
     as.formula(paste(x, "~",
                      paste(paste(xvar.NestRepro, collapse="+"),
-                           "(1|Stand)",
+                           "(1|Stand)", "(1|Block)",
                            sep="+")))
 })
 
+## offspring
+repro.mod <- glmer(formulas.NestRepro[[2]],
+                   family="poisson",
+                   data = repro.nest)
+
+summary(repro.mod)
+## plot(density(residuals(repro.mod)))
+
+## *****
+## fm ratio
+fm.mod <- lmer(formulas.NestRepro[[1]],
+                data = repro.nest)
+
+summary(fm.mod)
+
+## *****
+## females
+f.mod <- glmer(formulas.NestRepro[[3]],
+               data = repro.nest,
+               family="poisson")
+
+summary(f.mod)
+
 ## *************************************************************
 
-calcMods <- function(this.formula, formula.bee,
-                     dats,
-                     site.char){
-    mod = psem(
-        Parasite = lm(formula.bee,
-                        data = parasite),
-        NestRepro = lmer(this.formula,
-                       data = dats))
-}
-## *************************************************************
-osmia <- parasite
-
-## osmia
-osmia.mods <- lapply(formulas.NestRepro, calcMods,
-                      formula.bee, osmia, parasite)
+mod.offspring  <-  psem(
+    Bee = lm(formula.bee,
+                   data = site.data),
+    Parasite = glm(formula.parasite,
+                   data = site.data,
+                   family="binomial"),
+    NestRepro = lmer(formulas.NestRepro[[2]],
+                      data = repro.nest))
 
 
-print("osmia")
-lapply(osmia.mods, summary)
+summary(mod.offspring)
+
 lapply(osmia.mods, rsquared)
 
 
@@ -64,7 +121,7 @@ lapply(osmia.mods, rsquared)
 
 library(car)
 
-bee.par.mod <- lm(AnyParasite ~ standintensity + MeanDBH + 
+bee.par.mod <- lm(AnyParasite ~ standintensity + MeanDBH +
                      TreeRichness + FlowerRichness,
                        data=parasite)
 AIC(bee.par.mod)

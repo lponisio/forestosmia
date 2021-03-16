@@ -1,27 +1,21 @@
 
-calcPcoa <- function(par.path, paths.or.parasites, nperm,
-                     genSp, sites){
+
+
+calcPcoa <- function(par.dat, parasites, nperm,
+                     sites){
     ## function for calculating pcoas by bee species or site, running
-    ## permutations to determine dignificance. par.path is the main
+    ## permutations to determine dignificance. par.dat is the main
     ## dataset of parasite and pathogen exposure for each individual,
     ## path.or.parasites is a vector of the columns of either the
     ## parasites or pathogens, nperm is the number of permutations to
     ## determine significance, genSp is the vector of bee genuses,
     ## sites is a vector of sites
-    com <- par.path[, paths.or.parasites]
+    com <- par.dat[, parasites]
     no.p <- rowSums(com) == 0 | apply(com, 1, function(x) any(is.na(x)))
     com <- com[!no.p,]
-    genSp <- as.character(genSp)[!no.p]
     sites <- as.character(sites)[!no.p]
 
     com.dist  <- vegdist(com, method="jaccard")
-
-    ## are the species (bombus vs. apis) different in parasite composition?
-    beta.disper.gen <- betadisper(com.dist, genSp,
-                                  type="centroid")
-    perm.test.gen <- permutest(beta.disper.gen,
-                               control = permControl(nperm = nperm),
-                               pairwise = TRUE)
 
     ## are the site different in parasite composition?
     beta.disper.site <- betadisper(com.dist, sites,
@@ -30,14 +24,12 @@ calcPcoa <- function(par.path, paths.or.parasites, nperm,
                                 control = permControl(nperm = nperm),
                                 pairwise = TRUE)
 
-    return(list(tests= list(site=perm.test.site,
-                            species=perm.test.gen),
-                dists=list(dist=com.dist, sites=sites,
-                           genus=genSp)))
+    return(list(tests= perm.test.site,
+                dists=list(dist=com.dist, sites=sites)))
 }
 
 
-plotCommDist  <- function(dist.mat, sites, genus, par.or.path){
+plotCommDist  <- function(dist.mat, sites, par.or.path){
     ## plotting function for pcoas
     f.pcoa <- function(){
         cols <- rainbow(length(unique(sites)))
@@ -55,10 +47,10 @@ plotCommDist  <- function(dist.mat, sites, genus, par.or.path){
              yaxt='n',
              cex.lab=1.5)
         for(site in unique(sites)){
-            points(pcoa.comm[sites == site,],
+            points(jitter(pcoa.comm[sites == site,]),
                    col=cols[site], pch=16, cex=1.5)
-            points(pcoa.comm[sites == site,],
-                   col="black", pch=1, cex=1.5)
+            ## points(pcoa.comm[sites == site,],
+            ##        col="black", pch=1, cex=1.5)
         }
         ordihull(pcoa.comm, sites)
 
