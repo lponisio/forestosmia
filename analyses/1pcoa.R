@@ -7,16 +7,16 @@ source('src/pcoa.R')
 
 load("../data/parasite.Rdata")
 
-hist(parasite$standintensity, breaks=30)
+hist(parasite$BLcover, breaks=30)
 
 parasite$StandRank <- "low"
-parasite$StandRank[parasite$standintensity >= 7 &
-                   parasite$standintensity <= 12] <- "medium"
+parasite$StandRank[parasite$BLcover >= 7 &
+                   parasite$BLcover <= 12] <- "medium"
 
-parasite$StandRank[parasite$standintensity >= 13 &
-                   parasite$standintensity <= 18] <- "high"
+parasite$StandRank[parasite$BLcover >= 13 &
+                   parasite$BLcover <= 18] <- "high"
 
-parasite$StandRank[parasite$standintensity >= 19] <- "very high"
+parasite$StandRank[parasite$BLcover >= 19] <- "very high"
 
 
 infections <- c("Apicystis", "Crithidia", "Ascophaera")

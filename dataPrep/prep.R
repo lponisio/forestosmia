@@ -114,7 +114,7 @@ BLcover.stand <- tapply(vegcover$perCover,
                       mean, na.rm=TRUE)
 
 ## merge  stand and stand intensity
-standinfo$standintensity <- BLcover.stand[match(standinfo$Stand,
+standinfo$BLcover <- BLcover.stand[match(standinfo$Stand,
                                           names(BLcover.stand))]
 
 ## ***********************************************************

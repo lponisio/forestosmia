@@ -22,13 +22,13 @@ load("../data/NestRepro.Rdata")
 ## site.data <- site.data[!is.na(site.data$InfectedIndividuals),]
 
 #formula.bee <- formula(MeanBeeRichness ~
-                           #scale(standintensity) +
+                           #scale(BLcover) +
                            #scale(MeanCanopy) + scale(TreeRichness)  +
                            #scale(MeanBloomAbund) +    scale(MeanDBH) +
                            #scale(FlowerRichness) + scale(Acres))
 
 formula.bee <- formula(MeanBeeRichness ~
-                         scale(standintensity) +
+                         scale(BLcover) +
                          scale(MeanCanopy) + scale(TreeRichness) +    scale(MeanDBH) + 
                          scale(FlowerRichness) + scale(Acres))
 summary(lm(formula.bee,
@@ -41,13 +41,13 @@ vif(lm(formula.bee,
 ## *****
 
 #formula.bee <- formula(MeanBeeAbund ~
-                    #scale(standintensity) +
+                    #scale(BLcover) +
                     #scale(MeanCanopy)    +     scale(TreeRichness)  +
                     #scale(MeanBloomAbund) +    scale(MeanDBH) +
                     #scale(FlowerRichness) +    scale(Acres))
 
 formula.bee <- formula(MeanBeeAbund ~
-                         scale(standintensity) +
+                         scale(BLcover) +
                          scale(MeanCanopy) + scale(TreeRichness) + scale(MeanDBH) + 
                          scale(FlowerRichness) + scale(Acres))
 
@@ -83,7 +83,7 @@ summary(parasite.mod)
 formula.parasite <- formula(cbind(InfectedCrith,
                                   TestedTotals)~
                               scale(MeanBeeRichness)
-                              + scale(TreeRichness) + scale(standintensity)
+                              + scale(TreeRichness) + scale(BLcover)
                               + scale(MeanBloomAbund) 
                               + scale(MeanDBH)
                               + scale(FlowerRichness)
@@ -108,7 +108,7 @@ ys <- c("FM_ratio", "SumOffspring", "Females")
 
 xvar.NestRepro <- c("scale(ParasitismRate)",
       "scale(MeanBeeRichness)",
-      "scale(standintensity)",
+      "scale(BLcover)",
       "scale(TreeRichness)",
       "scale(MeanBloomAbund)", "scale(MeanDBH)",
       "scale(FlowerRichness)", "scale(Acres)")
@@ -152,7 +152,7 @@ ys <- c("FM_ratio", "SumOffspring", "Females")
 
 xvar.NestRepro <- c("scale(ParasitismRate)",
                     "scale(MeanBeeAbund)",
-                    "scale(standintensity)",
+                    "scale(BLcover)",
                     "scale(TreeRichness)",
                     "scale(MeanBloomAbund)", "scale(MeanDBH)",
                     "scale(FlowerRichness)", "scale(Acres)")
@@ -212,7 +212,7 @@ lapply(osmia.mods, rsquared)
 
 library(car)
 
-bee.par.mod <- lm(AnyParasite ~ standintensity + MeanDBH +
+bee.par.mod <- lm(AnyParasite ~ BLcover + MeanDBH +
                      TreeRichness + FlowerRichness,
                        data=parasite)
 AIC(bee.par.mod)
