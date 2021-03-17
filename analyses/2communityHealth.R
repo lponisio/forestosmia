@@ -3,6 +3,7 @@ setwd("analyses")
 rm(list=ls())
 library(piecewiseSEM)
 library(lme4)
+library(car)
 
 load("../data/indivData.Rdata")
 load("../data/siteData.Rdata")
@@ -13,66 +14,104 @@ load("../data/NestRepro.Rdata")
 ## make formulas for path analyses
 ## *************************************************************
 
+
+## **********************************************************
 ## formula for site effects on the bee community
+## **********************************************************
 
 ## site.data <- site.data[!is.na(site.data$InfectedIndividuals),]
 
-formula.bee <- formula(MeanBeeRichness ~
-                           scale(standintensity) +
-                           scale(MeanCanopy) + scale(TreeRichness)  +
-                           scale(MeanBloomAbund) +    scale(MeanDBH) +
-                            scale(FlowerRichness) + scale(Acres))
+#formula.bee <- formula(MeanBeeRichness ~
+                           #scale(standintensity) +
+                           #scale(MeanCanopy) + scale(TreeRichness)  +
+                           #scale(MeanBloomAbund) +    scale(MeanDBH) +
+                           #scale(FlowerRichness) + scale(Acres))
 
+formula.bee <- formula(MeanBeeRichness ~
+                         scale(standintensity) +
+                         scale(MeanCanopy) + scale(TreeRichness) +    scale(MeanDBH) + 
+                         scale(FlowerRichness) + scale(Acres))
 summary(lm(formula.bee,
            data = site.data))
 
+vif(lm(formula.bee,
+       data = site.data))
+
 
 ## *****
+
+#formula.bee <- formula(MeanBeeAbund ~
+                    #scale(standintensity) +
+                    #scale(MeanCanopy)    +     scale(TreeRichness)  +
+                    #scale(MeanBloomAbund) +    scale(MeanDBH) +
+                    #scale(FlowerRichness) +    scale(Acres))
 
 formula.bee <- formula(MeanBeeAbund ~
-                           scale(standintensity) +
-                           scale(MeanCanopy) + scale(TreeRichness)  +
-                           scale(MeanBloomAbund) +    scale(MeanDBH) +
-                            scale(FlowerRichness) + scale(Acres))
+                         scale(standintensity) +
+                         scale(MeanCanopy) + scale(TreeRichness) + scale(MeanDBH) + 
+                         scale(FlowerRichness) + scale(Acres))
 
 summary(lm(formula.bee,
            data = site.data))
 
-## *****
+## **********************************************************
+## formula for bee community effects on parasitism
+## **********************************************************
 
 formula.parasite <- formula(cbind(InfectedIndividuals,
                                   TestedTotals)~
-                                scale(MeanBeeRichness)+
-                                scale(standintensity) +
-                                scale(MeanDBH) + scale(TreeRichness)  + scale(Acres))
-
+                                scale(MeanBeeRichness))
 
 parasite.mod <-  glm(formula.parasite,
                      data = site.data,
                      family="binomial")
 summary(parasite.mod)
+
+## **** with abundance
+
+formula.parasite <- formula(cbind(InfectedIndividuals,
+                                  TestedTotals)~
+                              scale(MeanBeeAbund))
+
+parasite.mod <-  glm(formula.parasite,
+                     data = site.data,
+                     family="binomial")
+summary(parasite.mod)
+
+## *****try it out with other variables
+
+formula.parasite <- formula(cbind(InfectedIndividuals,
+                                  TestedTotals)~
+                              scale(MeanBeeAbund)
+                              + scale(TreeRichness) + scale(standintensity)
+                              + scale(MeanBloomAbund) + scale(MeanDBH)
+                              + scale(FlowerRichness) + scale(Acres))
+
+
 vif(parasite.mod)
 
-## *****
+## **********************************************************
 ## formulas for the site effects on nest reproductiom
+## **********************************************************
 
 ys <- c("FM_ratio", "SumOffspring", "Females")
 
+#xvar.NestRepro <- c("scale(CrithRate)")
+
 xvar.NestRepro <- c("scale(ParasitismRate)",
-                    "scale(MeanBeeAbund)",
-                    "scale(standintensity)",
-                    "scale(MeanCanopy)", "scale(TreeRichness)",
-                    "scale(MeanBloomAbund)", "scale(MeanDBH)",
-                    "scale(FlowerRichness)", "scale(Acres)")
-
-
+      "scale(MeanBeeAbund)",
+      "scale(standintensity)",
+      "scale(TreeRichness)",
+      "scale(MeanBloomAbund)", "scale(MeanDBH)",
+      "scale(FlowerRichness)", "scale(Acres)")
 
 formulas.NestRepro <-lapply(ys, function(x) {
-    as.formula(paste(x, "~",
-                     paste(paste(xvar.NestRepro, collapse="+"),
-                           "(1|Stand)", "(1|Block)",
-                           sep="+")))
+  as.formula(paste(x, "~",
+                   paste(paste(xvar.NestRepro, collapse="+"),
+                         "(1|Stand)", "(1|Block)",
+                         sep="+")))
 })
+
 
 ## offspring
 repro.mod <- glmer(formulas.NestRepro[[2]],

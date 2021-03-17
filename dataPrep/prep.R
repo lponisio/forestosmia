@@ -80,6 +80,19 @@ sick.totals <- parasite %>%
             ParasitismRate=mean(AnyParasite, na.rm=TRUE),
             InfectedIndividuals=sum(AnyParasite, na.rm=TRUE))
 
+## calculate crithidia, apicystis, and asospheara for each site
+
+sick.parasites <- parasite %>%
+  group_by(Stand) %>%
+  summarise(InfectedCrith=sum(Crithidia, na.rm=TRUE),
+            InfectedApicys=sum(Apicystis, na.rm=TRUE),
+            InfectedAsco=sum(Ascophaera, na.rm=TRUE),
+            CrithRate=mean(Crithidia, na.rm=TRUE),
+            AscoRate=mean(Ascophaera, na.rm=TRUE),
+            ApicysRate=mean(Apicystis, na.rm=TRUE))
+
+standinfo <- merge(standinfo, sick.parasites)
+
 
 ## ***********************************************************
 ## CLEAN VEG/STAND COVER DATA
@@ -239,6 +252,7 @@ repro.nest <- merge(repro.nest, standinfo)
 
 ## merge site level sick totals
 repro.nest <- merge(repro.nest, sick.totals)
+repro.nest <- merge(repro.nest, sick.parasites)
 
 ## INDIVIDUAL LEVEL DATA ********
 ## an merge tube level data to the patasite data mom
@@ -266,10 +280,13 @@ dim(parasite)
 indiv.data <- merge(parasite, standinfo)
 dim(indiv.data)
 
+
+
+
 ## *************************************************************
 ## write out final data
 dir <- "~/Dropbox/forestosmia_saved/cleaneddata"
-
+site.data <- merge(standinfo, sick.totals, all.x=TRUE)
 
 write.csv(indiv.data, file=file.path(dir,
                      "indivData.csv"), row.names=FALSE)
@@ -280,7 +297,6 @@ write.csv(standinfo, file=file.path(dir,
 write.csv(repro.nest, file=file.path(dir,
                        "NestRepro.csv"), row.names=FALSE)
 
-site.data <- merge(standinfo, sick.totals, all.x=TRUE)
 
 save.dir <- "~/Dropbox/forestosmia/data"
 save(indiv.data,

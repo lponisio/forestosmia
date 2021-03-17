@@ -21,12 +21,12 @@ parasite$StandRank[parasite$standintensity >= 19] <- "very high"
 
 infections <- c("Apicystis", "Crithidia", "Ascophaera")
 
-# Does parasite community differ between individuals? between stands?
+# Does parasite community differ between stands? between stands of different stand intensities?
 Stand <- parasite$Stand
 
 
 ## by stand intensity
-parasite.comms <- calcPcoa(parasite, infections, nperm=10000,
+parasite.comms <- calcPcoa(parasite, infections, nperm=1000,
                            parasite$StandRank)
 
 parasite.comms$tests
