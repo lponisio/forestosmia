@@ -12,9 +12,8 @@ dbh <- read.csv(file.path(dir,
                                "data/dbh.csv"),
                      stringsAsFactors=FALSE, na.strings=c("","NA"))
 
-floral <- read.csv(file.path(dir,
-                               "data/floral.csv"),
-                     stringsAsFactors=FALSE)
+floral <- read.csv(file.path(dir,"data/floral.csv"), stringsAsFactors=FALSE)
+
 
 repro <- read.csv(file.path(dir,
                                "data/reproductive.csv"),
@@ -28,14 +27,10 @@ vegcover <- read.csv(file.path(dir,
                                 "data/vegcover.csv"),
                       stringsAsFactors=FALSE)
 
-## bee <- read.csv(file.path(dir,
-##                           "data/beediversity.csv"),
-##                 stringsAsFactors=FALSE)
-
-
 bee <- read.csv(file.path(dir,
                           "data/bee-all.csv"),
                 stringsAsFactors=FALSE)
+
 
 
 ## ************CLEAN PARASITE DATA AND ADD SUMMARY METRICS**************************************
@@ -194,6 +189,9 @@ standinfo <- merge(standinfo, mean.floral, all.x=TRUE)
 ## OVER THE SEASON OR THE CLOSEST SAMPLE ROUND, OR THE AVERAGE OVER
 ## THE FRIST 2
 
+## drop any sample where Apidae isnt 1
+bee <- bee[!bee$Round == 3,]
+
 bee$Caste <- NULL
 
 bee$GenSp[bee$GenSp=="0 0"] <- NA
@@ -307,7 +305,6 @@ save(repro.nest,
 
 save(site.data,
      file=file.path(save.dir, "siteData.Rdata"))
-
 
 
 

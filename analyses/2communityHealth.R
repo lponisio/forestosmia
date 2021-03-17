@@ -80,12 +80,20 @@ summary(parasite.mod)
 
 ## *****try it out with other variables
 
-formula.parasite <- formula(cbind(InfectedIndividuals,
+formula.parasite <- formula(cbind(InfectedCrith,
                                   TestedTotals)~
-                              scale(MeanBeeAbund)
+                              scale(MeanBeeRichness)
                               + scale(TreeRichness) + scale(standintensity)
-                              + scale(MeanBloomAbund) + scale(MeanDBH)
-                              + scale(FlowerRichness) + scale(Acres))
+                              + scale(MeanBloomAbund) 
+                              + scale(MeanDBH)
+                              + scale(FlowerRichness)
+                              + scale(Acres))
+
+parasite.mod <-  glm(formula.parasite,
+                     data = site.data,
+                     family="binomial")
+summary(parasite.mod)
+
 
 
 vif(parasite.mod)
@@ -99,7 +107,7 @@ ys <- c("FM_ratio", "SumOffspring", "Females")
 #xvar.NestRepro <- c("scale(CrithRate)")
 
 xvar.NestRepro <- c("scale(ParasitismRate)",
-      "scale(MeanBeeAbund)",
+      "scale(MeanBeeRichness)",
       "scale(standintensity)",
       "scale(TreeRichness)",
       "scale(MeanBloomAbund)", "scale(MeanDBH)",
@@ -125,6 +133,50 @@ summary(repro.mod)
 ## fm ratio
 fm.mod <- lmer(formulas.NestRepro[[1]],
                 data = repro.nest)
+
+summary(fm.mod)
+
+## *****
+## females
+f.mod <- glmer(formulas.NestRepro[[3]],
+               data = repro.nest,
+               family="poisson")
+
+summary(f.mod)
+
+#********with bee abund
+
+ys <- c("FM_ratio", "SumOffspring", "Females")
+
+#xvar.NestRepro <- c("scale(CrithRate)")
+
+xvar.NestRepro <- c("scale(ParasitismRate)",
+                    "scale(MeanBeeAbund)",
+                    "scale(standintensity)",
+                    "scale(TreeRichness)",
+                    "scale(MeanBloomAbund)", "scale(MeanDBH)",
+                    "scale(FlowerRichness)", "scale(Acres)")
+
+formulas.NestRepro <-lapply(ys, function(x) {
+  as.formula(paste(x, "~",
+                   paste(paste(xvar.NestRepro, collapse="+"),
+                         "(1|Stand)", "(1|Block)",
+                         sep="+")))
+})
+
+
+## offspring
+repro.mod <- glmer(formulas.NestRepro[[2]],
+                   family="poisson",
+                   data = repro.nest)
+
+summary(repro.mod)
+## plot(density(residuals(repro.mod)))
+
+## *****
+## fm ratio
+fm.mod <- lmer(formulas.NestRepro[[1]],
+               data = repro.nest)
 
 summary(fm.mod)
 
