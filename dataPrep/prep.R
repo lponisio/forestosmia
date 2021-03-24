@@ -12,7 +12,7 @@ dbh <- read.csv(file.path(dir,
                                "data/dbh.csv"),
                      stringsAsFactors=FALSE, na.strings=c("","NA"))
 
-floral <- read.csv(file.path(dir,"data/floral.csv"), stringsAsFactors=FALSE)
+floral <- read.csv(file.path(dir,"data/floral2.csv"), stringsAsFactors=FALSE)
 
 
 repro <- read.csv(file.path(dir,
@@ -86,7 +86,9 @@ sick.parasites <- parasite %>%
             AscoRate=mean(Ascophaera, na.rm=TRUE),
             ApicysRate=mean(Apicystis, na.rm=TRUE))
 
-standinfo <- merge(standinfo, sick.parasites)
+#create a stand-level dataset and add parasite averages to it
+standinfo <- merge(standinfo, sick.parasites, all.x=TRUE)
+standinfo <- merge(standinfo, sick.totals, all.x=TRUE)
 
 
 ## ***********************************************************
@@ -113,7 +115,7 @@ BLcover.stand <- tapply(vegcover$perCover,
                       vegcover$Stand,
                       mean, na.rm=TRUE)
 
-## merge  stand and stand intensity
+## add BL Cover as a new column on our stand-level database
 standinfo$BLcover <- BLcover.stand[match(standinfo$Stand,
                                           names(BLcover.stand))]
 
@@ -185,11 +187,9 @@ standinfo <- merge(standinfo, mean.floral, all.x=TRUE)
 ## BEE DIVERSITY DATA, MERGE
 ## ***********************************************************
 
-## TBA WHICH ESTIMATE SHOULD BE USE FOR THE NESTS/PARASITES, THE MEAN
-## OVER THE SEASON OR THE CLOSEST SAMPLE ROUND, OR THE AVERAGE OVER
-## THE FRIST 2
+## I decided to calculate bee diversity over the sample rounds
 
-## drop any sample where Apidae isnt 1
+# drop any sample from round 3
 bee <- bee[!bee$Round == 3,]
 
 bee$Caste <- NULL
@@ -209,6 +209,7 @@ mean.bee <- bee.sum %>%
   summarise(MeanBeeRichness = mean(BeeRichness, na.rm=TRUE),
             MeanBeeAbund=mean(BeeAbund, na.rm=TRUE))
 
+#We only want bees that were netting and bees from 2019
 mean.bee.net <- mean.bee[mean.bee$Trap.type == "Net" &
                         mean.bee$Year == "2019",]
 
@@ -217,13 +218,36 @@ mean.bee.net$Year <- NULL
 
 standinfo <- merge(standinfo, mean.bee.net, all.x=TRUE)
 
+# we are done with the stand-level dataset, let's rename it
+site.data <- standinfo
+
 ## ***********************************************************
 ## CLEAN REPRODUCTIVE DATA, MERGE
 ## ***********************************************************
 
-## average number of Females/Males at a stand, by nest number
-colnames(repro)[colnames(repro) == "NestNum"] <- "Column"
+## we are just using females from Osmia nests in blocks
+## where samples were not pulled for parasite tests
 
+## TUBE LEVEL DATA ********
+
+## these columns not filled out
+repro$NestNum_Bri <- NULL
+repro$Notes <- NULL
+
+## not correctly calculated
+repro$Total <- NULL
+
+## drop any data from the Pathogen study
+repro <- repro[!repro$box_type == "Path",]
+
+## confirm that only data is from reproductive study, "FPH" blocks
+unique(repro$box_type)
+
+## rename "nest number" as column
+colnames(repro)[colnames(repro) == "NestNum_XRAY"] <- "Column"
+
+## to get average number of Females/Males at a stand, by nest number, 
+## we want to give each tube a unique ID, called "BlockNestTube"
 repro$BlockNestTube  <- paste0(repro$Block, repro$Row, repro$Column)
 parasite$BlockNestTube  <- paste0(parasite$Block,
                                      parasite$Nest)
@@ -232,28 +256,33 @@ repro$SumOffspring <- repro$Females + repro$Males
 
 ## BLOCK LEVEL DATA ********
 
-repro.nest <- aggregate(list(Females=repro$Females,
+## for each stand, average the number of females and females at each block
+## end up with Block A averages and Block B averages for each site
+
+repro.block <- aggregate(list(Females=repro$Females,
                              Males=repro$Males),
                        list(Stand=repro$Stand,
                             Block=repro$Block),
                        sum, na.rm=TRUE)
 
+## add more offspring summary data to block-level averages
 ## above 1 F > M, below 1 M>F, = 1 M=F
-repro.nest$FM_ratio <-  log(repro.nest$Females +1)/log(repro.nest$Males +1)
+repro.block$FM_ratio <-  log(repro.nest$Females +1)/log(repro.nest$Males +1)
 
-repro.nest$SumOffspring <-  repro.nest$Females + repro.nest$Males
+repro.block$SumOffspring <-  repro.nest$Females + repro.nest$Males
 
 
-## block level data with stand info merged
+## create a new block level dataset to describe reprodata, with stand info merged
+repro.block <- merge(repro.block, standinfo)
 
-repro.nest <- merge(repro.nest, standinfo)
+## merge site level sick totals to our reproductive, block-level dataset
+repro.block <- merge(repro.block, sick.totals)
+repro.block <- merge(repro.block, sick.parasites)
 
-## merge site level sick totals
-repro.nest <- merge(repro.nest, sick.totals)
-repro.nest <- merge(repro.nest, sick.parasites)
+## INDIVIDUAL LEVEL DATASET ********
 
-## INDIVIDUAL LEVEL DATA ********
-## an merge tube level data to the patasite data mom
+## the parasite dataset is our individual level data,
+## let's merge tube level data to this dataset and rename it as our indiv dataset
 
 parasite$Females <- repro$Females[match(
                                    paste(parasite$BlockNestTube,
@@ -273,18 +302,19 @@ parasite$SumOffspring <- repro$SumOffspring[match(
                                         paste(repro$BlockNestTube,
                                               repro$Stand))]
 
-## merge parasite and stand info
+## merge stand info onto parasite (individual data) and rename it as indivi. data
 dim(parasite)
 indiv.data <- merge(parasite, standinfo)
 dim(indiv.data)
 
 
 
-
 ## *************************************************************
-## write out final data
+## write out final datasets: stand-level, block-level, indiv-level
+## *************************************************************
+
 dir <- "~/Dropbox/forestosmia_saved/cleaneddata"
-site.data <- merge(standinfo, sick.totals, all.x=TRUE)
+#site.data <- merge(standinfo, sick.totals, all.x=TRUE)
 
 write.csv(indiv.data, file=file.path(dir,
                      "indivData.csv"), row.names=FALSE)
@@ -292,24 +322,17 @@ write.csv(indiv.data, file=file.path(dir,
 write.csv(standinfo, file=file.path(dir,
                      "standinfo.csv"), row.names=FALSE)
 
-write.csv(repro.nest, file=file.path(dir,
+write.csv(repro.block, file=file.path(dir,
                        "NestRepro.csv"), row.names=FALSE)
 
 
 save.dir <- "~/Dropbox/forestosmia/data"
 save(indiv.data,
-     file=file.path(save.dir, "indivData.Rdata"))
+     file=file.path(save.dir, "indiv.data.Rdata"))
 
-save(repro.nest,
-     file=file.path(save.dir, "NestRepro.Rdata"))
+save(repro.block,
+     file=file.path(save.dir, "repro.block.Rdata"))
 
 save(site.data,
-     file=file.path(save.dir, "siteData.Rdata"))
+     file=file.path(save.dir, "site.data.Rdata"))
 
-
-
-#for analysis, do path analysis
-#where is bee richness?
-# stand itensity (broadlaef), dbh, flowers, bee richness -> parasitsm (any parasite, dont use parasite richness) -> reprodcutive output (fecundity of males and females, just try with females)
-# stand itensity
-# dont try to put the path analyses yet, do one glmm for parasitism, and do one glmm for reproduction, with parasitism in the model for reproduction

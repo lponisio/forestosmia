@@ -210,11 +210,10 @@ lapply(osmia.mods, rsquared)
 ## sanity check using a linear models of Any Parasite
 ## *************************************************************
 
-library(car)
 
 bee.par.mod <- lm(AnyParasite ~ BLcover + MeanDBH +
                      TreeRichness + FlowerRichness,
-                       data=parasite)
+                       data=site.data)
 AIC(bee.par.mod)
 vif(bee.par.mod)
 summary(bee.par.mod)

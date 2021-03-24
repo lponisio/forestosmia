@@ -5,44 +5,81 @@ library(vegan)
 source('src/misc.R')
 source('src/pcoa.R')
 
-load("../data/parasite.Rdata")
+# *************************************************************************
+# Make a PCOA Based on Broadleaf cover, a measure of management intensity
+# *************************************************************************
 
-hist(parasite$BLcover, breaks=30)
+load("../data/indivData.Rdata")
 
-parasite$StandRank <- "low"
-parasite$StandRank[parasite$BLcover >= 7 &
-                   parasite$BLcover <= 12] <- "medium"
+hist(indiv.data$BLcover, breaks=30)
 
-parasite$StandRank[parasite$BLcover >= 13 &
-                   parasite$BLcover <= 18] <- "high"
+indiv.data$StandRank <- "low"
+indiv.data$StandRank[indiv.data$BLcover >= 7 &
+                       indiv.data$BLcover <= 12] <- "medium"
 
-parasite$StandRank[parasite$BLcover >= 19] <- "very high"
+indiv.data$StandRank[indiv.data$BLcover >= 13 &
+                      indiv.data$BLcover <= 18] <- "high"
+
+indiv.data$StandRank[indiv.data$BLcover >= 19] <- "very high"
 
 
 infections <- c("Apicystis", "Crithidia", "Ascophaera")
 
-# Does parasite community differ between stands? between stands of different stand intensities?
-Stand <- parasite$Stand
+Stand <- indiv.data$Stand
 
 
-## by stand intensity
-parasite.comms <- calcPcoa(parasite, infections, nperm=1000,
-                           parasite$StandRank)
+## PCOA by stand intensity
+parasite.comms <- calcPcoa(indiv.data, infections, nperm=1000,
+                           indiv.data$StandRank)
 
 parasite.comms$tests
+
 # plotting
-plotCommDist(parasite.comms$dist$dist, parasite.comms$dist$sites,
-             "parasite_stand_intensity")
+plotCommDist(indiv.data$dist$dist, parasite.comms$dist$sites,
+             "parasite_stand_intensity2")
 
-
+# *************************************************************************
+# Make a PCOA Based on Site
+# *************************************************************************
 ## by site
-parasite.comms.site <- calcPcoa(parasite, infections, nperm=1000,
-                           parasite$Stand)
+parasite.comms.site <- calcPcoa(indiv.data, infections, nperm=1000,
+                                indiv.data$Stand)
 
 parasite.comms.site$tests
 #$ plotting
 plotCommDist(parasite.comms.site$dist$dist, parasite.comms.site$dist$sites,
-             "parasite_site")
+             "parasite_site2")
 
 
+# *************************************************************************
+# Make a PCOA Based on DBH
+# *************************************************************************
+
+load("../data/indivData.Rdata")
+
+hist(indiv.data$MeanDBH, breaks=30)
+
+indiv.data$StandDBH <- "low"
+indiv.data$StandDBH[indiv.data$MeanDBH >= 6 &
+                     indiv.data$MeanDBH <= 10] <- "medium"
+
+indiv.data$StandDBH[indiv.data$MeanDBH >= 11 &
+                     indiv.data$MeanDBH <= 15] <- "high"
+
+indiv.data$StandDBH[indiv.data$MeanDBH >= 16] <- "very high"
+
+
+infections <- c("Apicystis", "Crithidia", "Ascophaera")
+
+Stand <- indiv.data$Stand
+
+## PCOA by stand dbh
+parasite.comms.dbh <- calcPcoa(indiv.data, infections, nperm=1000,
+                                indiv.data$StandDBH)
+
+parasite.comms.dbh$tests
+
+#$ plotting
+plotCommDist(parasite.comms.dbh$dist$dist, parasite.comms.dbh$dist$sites,
+             "parasiteDBH")
 
