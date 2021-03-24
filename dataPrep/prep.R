@@ -5,27 +5,27 @@ library(dplyr)
 setwd("~/Dropbox/forestosmia_saved")
 dir <- "~/Dropbox/forestosmia_saved"
 parasite <- read.csv(file.path(dir,
-                           "data/parasite.csv"),
-                 stringsAsFactors=FALSE)
+                               "data/parasite.csv"),
+                     stringsAsFactors=FALSE)
 
 dbh <- read.csv(file.path(dir,
-                               "data/dbh.csv"),
-                     stringsAsFactors=FALSE, na.strings=c("","NA"))
+                          "data/dbh.csv"),
+                stringsAsFactors=FALSE, na.strings=c("","NA"))
 
 floral <- read.csv(file.path(dir,"data/floral2.csv"), stringsAsFactors=FALSE)
 
 
 repro <- read.csv(file.path(dir,
-                               "data/reproductive.csv"),
-                     stringsAsFactors=FALSE)
+                            "data/reproductive.csv"),
+                  stringsAsFactors=FALSE)
 
 standinfo <- read.csv(file.path(dir,
-                               "data/standinfo.csv"),
-                     stringsAsFactors=FALSE)
+                                "data/standinfo.csv"),
+                      stringsAsFactors=FALSE)
 
 vegcover <- read.csv(file.path(dir,
-                                "data/vegcover.csv"),
-                      stringsAsFactors=FALSE)
+                               "data/vegcover.csv"),
+                     stringsAsFactors=FALSE)
 
 bee <- read.csv(file.path(dir,
                           "data/bee-all.csv"),
@@ -104,20 +104,20 @@ vegcover <- vegcover[!vegcover$Broadleaf == 0,]
 
 ## replace "tr" (tracce) with 1.00
 vegcover$perCover[vegcover$perCover == "tr" |
-                  vegcover$perCover == "TR"|
-                  vegcover$perCover ==  "Tr"]  <- "1.0"
+                    vegcover$perCover == "TR"|
+                    vegcover$perCover ==  "Tr"]  <- "1.0"
 
 ## average abundance of broadleaf cover among plots at a site
 
 vegcover$perCover <- as.numeric(vegcover$perCover)
 
 BLcover.stand <- tapply(vegcover$perCover,
-                      vegcover$Stand,
-                      mean, na.rm=TRUE)
+                        vegcover$Stand,
+                        mean, na.rm=TRUE)
 
 ## add BL Cover as a new column on our stand-level database
 standinfo$BLcover <- BLcover.stand[match(standinfo$Stand,
-                                          names(BLcover.stand))]
+                                         names(BLcover.stand))]
 
 ## ***********************************************************
 ##  CLEAN DBH DATA
@@ -168,8 +168,8 @@ floral$Flower_sci[floral$Flower_sci == 0] <- NA
 
 floral.sum <- floral %>%
   group_by(Stand, Transect) %>%
-    summarise(FlowerRichness =
-                  length(unique(Flower_sci[!is.na(Flower_sci)])),
+  summarise(FlowerRichness =
+              length(unique(Flower_sci[!is.na(Flower_sci)])),
             BloomAbund=sum(Blooms, na.rm=TRUE),
             StemAbund=sum(Stems, na.rm=TRUE),
             CanopyCover=mean(Canopy_cent,  na.rm=TRUE))
@@ -211,7 +211,7 @@ mean.bee <- bee.sum %>%
 
 #We only want bees that were netting and bees from 2019
 mean.bee.net <- mean.bee[mean.bee$Trap.type == "Net" &
-                        mean.bee$Year == "2019",]
+                           mean.bee$Year == "2019",]
 
 mean.bee.net$Trap.type <- NULL
 mean.bee.net$Year <- NULL
@@ -250,7 +250,7 @@ colnames(repro)[colnames(repro) == "NestNum_XRAY"] <- "Column"
 ## we want to give each tube a unique ID, called "BlockNestTube"
 repro$BlockNestTube  <- paste0(repro$Block, repro$Row, repro$Column)
 parasite$BlockNestTube  <- paste0(parasite$Block,
-                                     parasite$Nest)
+                                  parasite$Nest)
 
 repro$SumOffspring <- repro$Females + repro$Males
 
@@ -260,10 +260,10 @@ repro$SumOffspring <- repro$Females + repro$Males
 ## end up with Block A averages and Block B averages for each site
 
 repro.block <- aggregate(list(Females=repro$Females,
-                             Males=repro$Males),
-                       list(Stand=repro$Stand,
-                            Block=repro$Block),
-                       sum, na.rm=TRUE)
+                              Males=repro$Males),
+                         list(Stand=repro$Stand,
+                              Block=repro$Block),
+                         sum, na.rm=TRUE)
 
 ## add more offspring summary data to block-level averages
 ## above 1 F > M, below 1 M>F, = 1 M=F
@@ -285,22 +285,22 @@ repro.block <- merge(repro.block, sick.parasites)
 ## let's merge tube level data to this dataset and rename it as our indiv dataset
 
 parasite$Females <- repro$Females[match(
-                                   paste(parasite$BlockNestTube,
-                                              parasite$Stand),
-                                        paste(repro$BlockNestTube,
-                                              repro$Stand))]
+  paste(parasite$BlockNestTube,
+        parasite$Stand),
+  paste(repro$BlockNestTube,
+        repro$Stand))]
 
 parasite$Males <- repro$Males[match(
-                                   paste(parasite$BlockNestTube,
-                                              parasite$Stand),
-                                        paste(repro$BlockNestTube,
-                                              repro$Stand))]
+  paste(parasite$BlockNestTube,
+        parasite$Stand),
+  paste(repro$BlockNestTube,
+        repro$Stand))]
 
 parasite$SumOffspring <- repro$SumOffspring[match(
-                                   paste(parasite$BlockNestTube,
-                                              parasite$Stand),
-                                        paste(repro$BlockNestTube,
-                                              repro$Stand))]
+  paste(parasite$BlockNestTube,
+        parasite$Stand),
+  paste(repro$BlockNestTube,
+        repro$Stand))]
 
 ## merge stand info onto parasite (individual data) and rename it as indivi. data
 dim(parasite)
@@ -317,13 +317,13 @@ dir <- "~/Dropbox/forestosmia_saved/cleaneddata"
 #site.data <- merge(standinfo, sick.totals, all.x=TRUE)
 
 write.csv(indiv.data, file=file.path(dir,
-                     "indivData.csv"), row.names=FALSE)
+                                     "indivData.csv"), row.names=FALSE)
 
 write.csv(standinfo, file=file.path(dir,
-                     "standinfo.csv"), row.names=FALSE)
+                                    "standinfo.csv"), row.names=FALSE)
 
 write.csv(repro.block, file=file.path(dir,
-                       "NestRepro.csv"), row.names=FALSE)
+                                      "NestRepro.csv"), row.names=FALSE)
 
 
 save.dir <- "~/Dropbox/forestosmia/data"

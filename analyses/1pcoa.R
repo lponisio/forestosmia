@@ -18,7 +18,7 @@ indiv.data$StandRank[indiv.data$BLcover >= 7 &
                        indiv.data$BLcover <= 12] <- "medium"
 
 indiv.data$StandRank[indiv.data$BLcover >= 13 &
-                      indiv.data$BLcover <= 18] <- "high"
+                       indiv.data$BLcover <= 18] <- "high"
 
 indiv.data$StandRank[indiv.data$BLcover >= 19] <- "very high"
 
@@ -61,10 +61,10 @@ hist(indiv.data$MeanDBH, breaks=30)
 
 indiv.data$StandDBH <- "low"
 indiv.data$StandDBH[indiv.data$MeanDBH >= 6 &
-                     indiv.data$MeanDBH <= 10] <- "medium"
+                      indiv.data$MeanDBH <= 10] <- "medium"
 
 indiv.data$StandDBH[indiv.data$MeanDBH >= 11 &
-                     indiv.data$MeanDBH <= 15] <- "high"
+                      indiv.data$MeanDBH <= 15] <- "high"
 
 indiv.data$StandDBH[indiv.data$MeanDBH >= 16] <- "very high"
 
@@ -75,7 +75,7 @@ Stand <- indiv.data$Stand
 
 ## PCOA by stand dbh
 parasite.comms.dbh <- calcPcoa(indiv.data, infections, nperm=1000,
-                                indiv.data$StandDBH)
+                               indiv.data$StandDBH)
 
 parasite.comms.dbh$tests
 

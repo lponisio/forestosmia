@@ -22,10 +22,10 @@ load("../data/NestRepro.Rdata")
 ## site.data <- site.data[!is.na(site.data$InfectedIndividuals),]
 
 #formula.bee <- formula(MeanBeeRichness ~
-                           #scale(BLcover) +
-                           #scale(MeanCanopy) + scale(TreeRichness)  +
-                           #scale(MeanBloomAbund) +    scale(MeanDBH) +
-                           #scale(FlowerRichness) + scale(Acres))
+#scale(BLcover) +
+#scale(MeanCanopy) + scale(TreeRichness)  +
+#scale(MeanBloomAbund) +    scale(MeanDBH) +
+#scale(FlowerRichness) + scale(Acres))
 
 formula.bee <- formula(MeanBeeRichness ~
                          scale(BLcover) +
@@ -41,10 +41,10 @@ vif(lm(formula.bee,
 ## *****
 
 #formula.bee <- formula(MeanBeeAbund ~
-                    #scale(BLcover) +
-                    #scale(MeanCanopy)    +     scale(TreeRichness)  +
-                    #scale(MeanBloomAbund) +    scale(MeanDBH) +
-                    #scale(FlowerRichness) +    scale(Acres))
+#scale(BLcover) +
+#scale(MeanCanopy)    +     scale(TreeRichness)  +
+#scale(MeanBloomAbund) +    scale(MeanDBH) +
+#scale(FlowerRichness) +    scale(Acres))
 
 formula.bee <- formula(MeanBeeAbund ~
                          scale(BLcover) +
@@ -60,7 +60,7 @@ summary(lm(formula.bee,
 
 formula.parasite <- formula(cbind(InfectedIndividuals,
                                   TestedTotals)~
-                                scale(MeanBeeRichness))
+                              scale(MeanBeeRichness))
 
 parasite.mod <-  glm(formula.parasite,
                      data = site.data,
@@ -83,11 +83,11 @@ summary(parasite.mod)
 formula.parasite <- formula(cbind(InfectedCrith,
                                   TestedTotals)~
                               scale(MeanBeeRichness)
-                              + scale(TreeRichness) + scale(BLcover)
-                              + scale(MeanBloomAbund) 
-                              + scale(MeanDBH)
-                              + scale(FlowerRichness)
-                              + scale(Acres))
+                            + scale(TreeRichness) + scale(BLcover)
+                            + scale(MeanBloomAbund) 
+                            + scale(MeanDBH)
+                            + scale(FlowerRichness)
+                            + scale(Acres))
 
 parasite.mod <-  glm(formula.parasite,
                      data = site.data,
@@ -107,11 +107,11 @@ ys <- c("FM_ratio", "SumOffspring", "Females")
 #xvar.NestRepro <- c("scale(CrithRate)")
 
 xvar.NestRepro <- c("scale(ParasitismRate)",
-      "scale(MeanBeeRichness)",
-      "scale(BLcover)",
-      "scale(TreeRichness)",
-      "scale(MeanBloomAbund)", "scale(MeanDBH)",
-      "scale(FlowerRichness)", "scale(Acres)")
+                    "scale(MeanBeeRichness)",
+                    "scale(BLcover)",
+                    "scale(TreeRichness)",
+                    "scale(MeanBloomAbund)", "scale(MeanDBH)",
+                    "scale(FlowerRichness)", "scale(Acres)")
 
 formulas.NestRepro <-lapply(ys, function(x) {
   as.formula(paste(x, "~",
@@ -132,7 +132,7 @@ summary(repro.mod)
 ## *****
 ## fm ratio
 fm.mod <- lmer(formulas.NestRepro[[1]],
-                data = repro.nest)
+               data = repro.nest)
 
 summary(fm.mod)
 
@@ -191,13 +191,13 @@ summary(f.mod)
 ## *************************************************************
 
 mod.offspring  <-  psem(
-    Bee = lm(formula.bee,
-                   data = site.data),
-    Parasite = glm(formula.parasite,
-                   data = site.data,
-                   family="binomial"),
-    NestRepro = lmer(formulas.NestRepro[[2]],
-                      data = repro.nest))
+  Bee = lm(formula.bee,
+           data = site.data),
+  Parasite = glm(formula.parasite,
+                 data = site.data,
+                 family="binomial"),
+  NestRepro = lmer(formulas.NestRepro[[2]],
+                   data = repro.nest))
 
 
 summary(mod.offspring)
@@ -212,8 +212,8 @@ lapply(osmia.mods, rsquared)
 
 
 bee.par.mod <- lm(AnyParasite ~ BLcover + MeanDBH +
-                     TreeRichness + FlowerRichness,
-                       data=site.data)
+                    TreeRichness + FlowerRichness,
+                  data=site.data)
 AIC(bee.par.mod)
 vif(bee.par.mod)
 summary(bee.par.mod)
