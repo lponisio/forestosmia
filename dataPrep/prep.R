@@ -267,9 +267,9 @@ repro.block <- aggregate(list(Females=repro$Females,
 
 ## add more offspring summary data to block-level averages
 ## above 1 F > M, below 1 M>F, = 1 M=F
-repro.block$FM_ratio <-  log(repro.nest$Females +1)/log(repro.nest$Males +1)
+repro.block$FM_ratio <-  log(repro.block$Females +1)/log(repro.nest$Males +1)
 
-repro.block$SumOffspring <-  repro.nest$Females + repro.nest$Males
+repro.block$SumOffspring <-  repro.block$Females + repro.nest$Males
 
 
 ## create a new block level dataset to describe reprodata, with stand info merged
