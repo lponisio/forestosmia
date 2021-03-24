@@ -187,7 +187,7 @@ standinfo <- merge(standinfo, mean.floral, all.x=TRUE)
 ## BEE DIVERSITY DATA, MERGE
 ## ***********************************************************
 
-## I decided to calculate bee diversity over the sample rounds
+## I decided to calculate bee diversity over 2 sample rounds
 
 # drop any sample from round 3
 bee <- bee[!bee$Round == 3,]
@@ -205,15 +205,22 @@ bee.sum <- bee %>%
             BeeAbund=sum(Count, na.rm=TRUE))
 
 mean.bee <- bee.sum %>%
-  group_by(Stand, Trap.type, Year) %>%
+  group_by(Stand, Year) %>%
   summarise(MeanBeeRichness = mean(BeeRichness, na.rm=TRUE),
             MeanBeeAbund=mean(BeeAbund, na.rm=TRUE))
 
-#We only want bees that were netting and bees from 2019
-mean.bee.net <- mean.bee[mean.bee$Trap.type == "Net" &
-                           mean.bee$Year == "2019",]
+#mean.bee <- bee.sum %>%
+#  group_by(Stand, Trap.type, Year) %>%
+#  summarise(MeanBeeRichness = mean(BeeRichness, na.rm=TRUE),
+#            MeanBeeAbund=mean(BeeAbund, na.rm=TRUE))
 
-mean.bee.net$Trap.type <- NULL
+#We only want bees that were netting and bees from 2019
+#mean.bee.net <- mean.bee[mean.bee$Trap.type == "Net" &
+#                          mean.bee$Year == "2019",]
+
+mean.bee.net <- mean.bee[mean.bee$Year == "2019",]
+
+#mean.bee.net$Trap.type <- NULL
 mean.bee.net$Year <- NULL
 
 standinfo <- merge(standinfo, mean.bee.net, all.x=TRUE)
@@ -267,9 +274,9 @@ repro.block <- aggregate(list(Females=repro$Females,
 
 ## add more offspring summary data to block-level averages
 ## above 1 F > M, below 1 M>F, = 1 M=F
-repro.block$FM_ratio <-  log(repro.block$Females +1)/log(repro.nest$Males +1)
+repro.block$FM_ratio <-  log(repro.block$Females +1)/log(repro.block$Males +1)
 
-repro.block$SumOffspring <-  repro.block$Females + repro.nest$Males
+repro.block$SumOffspring <-  repro.block$Females + repro.block$Males
 
 
 ## create a new block level dataset to describe reprodata, with stand info merged

@@ -5,9 +5,9 @@ library(piecewiseSEM)
 library(lme4)
 library(car)
 
-load("../data/indivData.Rdata")
-load("../data/siteData.Rdata")
-load("../data/NestRepro.Rdata")
+load("../data/indiv.data.Rdata")
+load("../data/site.data.Rdata")
+load("../data/repro.block.Rdata")
 
 
 ## *************************************************************
@@ -19,18 +19,15 @@ load("../data/NestRepro.Rdata")
 ## formula for site effects on the bee community
 ## **********************************************************
 
-## site.data <- site.data[!is.na(site.data$InfectedIndividuals),]
+site.data <- site.data[!is.na(site.data$InfectedIndividuals),]
 
-#formula.bee <- formula(MeanBeeRichness ~
-#scale(BLcover) +
-#scale(MeanCanopy) + scale(TreeRichness)  +
-#scale(MeanBloomAbund) +    scale(MeanDBH) +
-#scale(FlowerRichness) + scale(Acres))
 
 formula.bee <- formula(MeanBeeRichness ~
                          scale(BLcover) +
-                         scale(MeanCanopy) + scale(TreeRichness) +    scale(MeanDBH) + 
-                         scale(FlowerRichness) + scale(Acres))
+                         scale(MeanCanopy) + scale(TreeRichness) +  scale(MeanDBH)
+                       + scale(MeanBloomAbund))
+#+ scale(FlowerRichness) 
+
 summary(lm(formula.bee,
            data = site.data))
 
@@ -40,16 +37,11 @@ vif(lm(formula.bee,
 
 ## *****
 
-#formula.bee <- formula(MeanBeeAbund ~
-#scale(BLcover) +
-#scale(MeanCanopy)    +     scale(TreeRichness)  +
-#scale(MeanBloomAbund) +    scale(MeanDBH) +
-#scale(FlowerRichness) +    scale(Acres))
-
 formula.bee <- formula(MeanBeeAbund ~
                          scale(BLcover) +
                          scale(MeanCanopy) + scale(TreeRichness) + scale(MeanDBH) + 
-                         scale(FlowerRichness) + scale(Acres))
+                         #scale(FlowerRichness) + 
+                         scale(MeanBloomAbund))
 
 summary(lm(formula.bee,
            data = site.data))
@@ -78,22 +70,24 @@ parasite.mod <-  glm(formula.parasite,
                      family="binomial")
 summary(parasite.mod)
 
+## tried above with InfectedCrith, InfectedAsco, InfectedApicys
+
 ## *****try it out with other variables
 
 formula.parasite <- formula(cbind(InfectedCrith,
                                   TestedTotals)~
                               scale(MeanBeeRichness)
-                            + scale(TreeRichness) + scale(BLcover)
+                            + scale(TreeRichness) 
+                            + scale(BLcover)
+                            + scale(MeanCanopy)
                             + scale(MeanBloomAbund) 
-                            + scale(MeanDBH)
-                            + scale(FlowerRichness)
-                            + scale(Acres))
+                            + scale(MeanDBH))
+                           # + scale(FlowerRichness))
 
 parasite.mod <-  glm(formula.parasite,
                      data = site.data,
                      family="binomial")
 summary(parasite.mod)
-
 
 
 vif(parasite.mod)
@@ -104,14 +98,17 @@ vif(parasite.mod)
 
 ys <- c("FM_ratio", "SumOffspring", "Females")
 
-#xvar.NestRepro <- c("scale(CrithRate)")
+#xvar.NestRepro <- c("scale(ParasitismRate)")
 
 xvar.NestRepro <- c("scale(ParasitismRate)",
                     "scale(MeanBeeRichness)",
                     "scale(BLcover)",
                     "scale(TreeRichness)",
-                    "scale(MeanBloomAbund)", "scale(MeanDBH)",
-                    "scale(FlowerRichness)", "scale(Acres)")
+                    "scale(MeanCanopy)",
+                    "scale(MeanBloomAbund)", 
+                    "scale(MeanDBH)")
+
+                    #"scale(FlowerRichness)")
 
 formulas.NestRepro <-lapply(ys, function(x) {
   as.formula(paste(x, "~",
@@ -124,7 +121,7 @@ formulas.NestRepro <-lapply(ys, function(x) {
 ## offspring
 repro.mod <- glmer(formulas.NestRepro[[2]],
                    family="poisson",
-                   data = repro.nest)
+                   data = repro.block)
 
 summary(repro.mod)
 ## plot(density(residuals(repro.mod)))
@@ -132,14 +129,14 @@ summary(repro.mod)
 ## *****
 ## fm ratio
 fm.mod <- lmer(formulas.NestRepro[[1]],
-               data = repro.nest)
+               data = repro.block)
 
 summary(fm.mod)
 
 ## *****
 ## females
 f.mod <- glmer(formulas.NestRepro[[3]],
-               data = repro.nest,
+               data = repro.block,
                family="poisson")
 
 summary(f.mod)
@@ -148,14 +145,15 @@ summary(f.mod)
 
 ys <- c("FM_ratio", "SumOffspring", "Females")
 
-#xvar.NestRepro <- c("scale(CrithRate)")
+#xvar.NestRepro <- c("scale(ApicysRate)")
 
 xvar.NestRepro <- c("scale(ParasitismRate)",
                     "scale(MeanBeeAbund)",
                     "scale(BLcover)",
                     "scale(TreeRichness)",
-                    "scale(MeanBloomAbund)", "scale(MeanDBH)",
-                    "scale(FlowerRichness)", "scale(Acres)")
+                    "scale(MeanCanopy)",
+                    "scale(MeanBloomAbund)", 
+                    "scale(MeanDBH)")
 
 formulas.NestRepro <-lapply(ys, function(x) {
   as.formula(paste(x, "~",
@@ -168,7 +166,7 @@ formulas.NestRepro <-lapply(ys, function(x) {
 ## offspring
 repro.mod <- glmer(formulas.NestRepro[[2]],
                    family="poisson",
-                   data = repro.nest)
+                   data = repro.block)
 
 summary(repro.mod)
 ## plot(density(residuals(repro.mod)))
@@ -176,14 +174,14 @@ summary(repro.mod)
 ## *****
 ## fm ratio
 fm.mod <- lmer(formulas.NestRepro[[1]],
-               data = repro.nest)
+               data = repro.block)
 
 summary(fm.mod)
 
 ## *****
 ## females
 f.mod <- glmer(formulas.NestRepro[[3]],
-               data = repro.nest,
+               data = repro.block,
                family="poisson")
 
 summary(f.mod)
