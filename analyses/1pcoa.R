@@ -9,7 +9,7 @@ source('src/pcoa.R')
 # Make a PCOA Based on Broadleaf cover, a measure of management intensity
 # *************************************************************************
 
-load("../data/indivData.Rdata")
+load("../data/indiv.data.Rdata")
 
 hist(indiv.data$BLcover, breaks=30)
 
@@ -55,7 +55,7 @@ plotCommDist(parasite.comms.site$dist$dist, parasite.comms.site$dist$sites,
 # Make a PCOA Based on DBH
 # *************************************************************************
 
-load("../data/indivData.Rdata")
+load("../data/indiv.data.Rdata")
 
 hist(indiv.data$MeanDBH, breaks=30)
 
