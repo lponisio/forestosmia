@@ -1,5 +1,6 @@
 rm(list=ls())
 library(dplyr)
+library(lubridate)
 ## prepares raw data and creates dataset for analyses
 
 setwd("~/Dropbox/forestosmia_saved")
@@ -31,6 +32,9 @@ bee <- read.csv(file.path(dir,
                           "data/bee-all.csv"),
                 stringsAsFactors=FALSE)
 
+foraging <- read.csv(file.path(dir,
+                          "data/osmiaforaging.csv"),
+                stringsAsFactors=FALSE)
 
 
 ## ************CLEAN PARASITE DATA AND ADD SUMMARY METRICS**************************************
@@ -86,9 +90,13 @@ sick.parasites <- parasite %>%
             AscoRate=mean(Ascophaera, na.rm=TRUE),
             ApicysRate=mean(Apicystis, na.rm=TRUE))
 
-#create a stand-level dataset and add parasite averages to it
+# create a stand-level dataset and add parasite averages to it
 standinfo <- merge(standinfo, sick.parasites, all.x=TRUE)
 standinfo <- merge(standinfo, sick.totals, all.x=TRUE)
+
+
+# create boxplot of parasitism at females at a site
+
 
 
 ## ***********************************************************
@@ -154,6 +162,8 @@ standinfo <- merge(standinfo, stand.sum)
 ## CLEAN FLORAL DATA, MERGE
 ## ***********************************************************
 
+## This dataset includes floral data from first two sampling rounds, when we had osmia out\
+
 ## we want abundance flowers (abundflw), richness flowering species
 ## (richnessflwingsp), and abundfloweringsp
 
@@ -199,31 +209,64 @@ bee$GenSp[bee$GenSp=="0 0"] <- NA
 bee$GenSp[bee$GenSp=="NA NA"] <- NA
 
 ## generate abundance of bees in each sample round
+## calculate bee abundance with just net data
+## calculate bee richness with net + pan data
 bee.sum <- bee %>%
   group_by(Stand, Round, Trap.type, Year) %>%
   summarise(BeeRichness = length(unique(GenSp[!is.na(GenSp)])),
             BeeAbund=sum(Count, na.rm=TRUE))
 
-mean.bee <- bee.sum %>%
+mean.bee.rich <- bee.sum %>%
   group_by(Stand, Year) %>%
-  summarise(MeanBeeRichness = mean(BeeRichness, na.rm=TRUE),
-            MeanBeeAbund=mean(BeeAbund, na.rm=TRUE))
+  summarise(MeanBeeRichness = mean(BeeRichness, na.rm=TRUE))
 
-#mean.bee <- bee.sum %>%
-#  group_by(Stand, Trap.type, Year) %>%
-#  summarise(MeanBeeRichness = mean(BeeRichness, na.rm=TRUE),
-#            MeanBeeAbund=mean(BeeAbund, na.rm=TRUE))
 
-#We only want bees that were netting and bees from 2019
-#mean.bee.net <- mean.bee[mean.bee$Trap.type == "Net" &
-#                          mean.bee$Year == "2019",]
+mean.bee.abund <- bee.sum %>%
+ group_by(Stand, Trap.type, Year) %>%
+    summarise(MeanBeeAbund=mean(BeeAbund, na.rm=TRUE))
 
-mean.bee.net <- mean.bee[mean.bee$Year == "2019",]
+# We only want bees that were netting and bees from 2019
+mean.bee.abund <- mean.bee.abund[mean.bee.abund$Trap.type == "Net" &
+                        mean.bee.abund$Year == "2019",]
 
-#mean.bee.net$Trap.type <- NULL
-mean.bee.net$Year <- NULL
 
-standinfo <- merge(standinfo, mean.bee.net, all.x=TRUE)
+mean.bee.rich <- mean.bee.rich[mean.bee.rich$Year == "2019",]
+
+# remove columsn we don't want
+mean.bee.abund$Trap.type <- NULL
+mean.bee.abund$Year <- NULL
+mean.bee.rich$Year <- NULL
+
+# merge to site-level data
+standinfo <- merge(standinfo, mean.bee.abund, all.x=TRUE)
+standinfo <- merge(standinfo, mean.bee.rich, all.x=TRUE)
+
+
+## ***********************************************************
+## honey bees
+## ***********************************************************
+
+#honey bees from net data
+
+hb.bee <- bee[bee$Genus == "Apis",]
+
+hb.sum <- hb.bee %>%
+  group_by(Stand, Round, Trap.type, Year) %>%
+  summarise(BeeAbund=sum(Count, na.rm=TRUE))
+
+mean.hb <- hb.sum %>%
+  group_by(Stand, Trap.type, Year) %>%
+  summarise(MeanHBAbund=mean(BeeAbund, na.rm=TRUE))
+
+
+#We only want hb that were netting and bees from 2019
+mean.hb <- mean.hb[mean.hb$Trap.type == "Net" &
+                                  mean.hb$Year == "2019",]
+
+mean.hb$Trap.type <- NULL
+mean.hb$Year <- NULL
+
+standinfo <- merge(standinfo, mean.hb, all.x=TRUE)
 
 # we are done with the stand-level dataset, let's rename it
 site.data <- standinfo
@@ -314,7 +357,63 @@ dim(parasite)
 indiv.data <- merge(parasite, standinfo)
 dim(indiv.data)
 
+## ***********************************************************
+## CLEAN FORAGING DATA, MERGE
+## ***********************************************************
 
+## we are just looking at foraging distance of females from Osmia nests in blocks
+## where samples were not pulled for parasite tests
+
+## these columns not filled out entirely, have blanks
+foraging$videosanalyzedby <- NULL
+foraging$collectorinitials <- NULL
+foraging$tempF <- NULL
+foraging$NumCappedCells <- NULL
+foraging$videostart.h.min <- NULL
+foraging$Activity <- NULL
+foraging$Notes <- NULL
+foraging$BeeLeaves.h.mm.ss <- NULL
+foraging$BeeReturns.h.mm.ss <- NULL
+
+## drop any data where trip length could not be calculated due to lack of footage
+
+foraging$TripLength.h.mm.ss[foraging$TripLength.h.mm.ss==""] <- NA
+foraging$TripLength.h.mm.ss[foraging$TripLength.h.mm.ss==" "] <- NA
+foraging <- na.omit(foraging)
+
+
+## BLOCK LEVEL DATA ********
+
+## for each stand, average the trip length of females at each block
+## end up with Block A averages and Block B averages for each site
+
+## conver triplenth from character to time with hms in lubridate package
+foraging$TripLength.h.mm.ss <- hms(foraging$TripLength.h.mm.ss)
+
+foraging.block <- foraging %>%
+  group_by(Stand, NestBlock) %>%
+  summarise(MeanTripLengthBlock=mean(TripLength.h.mm.ss, na.rm = TRUE))
+
+
+## merge to our block-level dataset
+repro.block <- merge(repro.block, foraging.block)
+
+
+## SITE/INDIVIDUAL LEVEL DATASET ********
+
+## let's create site-level data and merge onto site and individual level datasets
+
+foraging.stand <- foraging %>%
+  group_by(Stand) %>%
+  summarise(MeanTripLengthStand=mean(TripLength.h.mm.ss, na.rm = TRUE))
+
+## merge stand-level
+standinfo <- merge(standinfo, foraging.stand, all.x=TRUE)
+
+## merge individual data
+dim(indiv.data)
+indiv.data <- merge(indiv.data, foraging.stand)
+dim(indiv.data)
 
 ## *************************************************************
 ## write out final datasets: stand-level, block-level, indiv-level
