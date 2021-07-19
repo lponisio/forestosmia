@@ -55,7 +55,7 @@ plotCommDist(parasite.comms.site$dist$dist, parasite.comms.site$dist$sites,
 # Make a PCOA Based on DBH
 # *************************************************************************
 
-load("../data/indiv.data.Rdata")
+load("../data/indivdata.Rdata")
 
 hist(indiv.data$MeanDBH, breaks=30)
 
