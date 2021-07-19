@@ -8,6 +8,11 @@ library(lmerTest)
 load("../data/parasite.Rdata")
 load("../data/NestRepro.Rdata")
 
+
+load("../data/indivdata.Rdata")
+load("../data/sitedata.Rdata")
+load("../data/reproblock.Rdata")
+
 ## *************************************************************
 ## make formulas for path analyses
 ## *************************************************************

@@ -133,6 +133,9 @@ fm.mod <- lmer(formulas.NestRepro[[1]],
 
 summary(fm.mod)
 
+vif(fm.mod)
+
+
 ## *****
 ## females
 f.mod <- glmer(formulas.NestRepro[[3]],
@@ -140,6 +143,8 @@ f.mod <- glmer(formulas.NestRepro[[3]],
                family="poisson")
 
 summary(f.mod)
+
+vif(f.mod)
 
 #********with bee abund
 
@@ -186,6 +191,8 @@ f.mod <- glmer(formulas.NestRepro[[3]],
 
 summary(f.mod)
 
+
+vif(f.mod)
 ## *************************************************************
 
 mod.offspring  <-  psem(
@@ -195,7 +202,7 @@ mod.offspring  <-  psem(
                  data = site.data,
                  family="binomial"),
   NestRepro = lmer(formulas.NestRepro[[2]],
-                   data = repro.nest))
+                   data = repro.block))
 
 
 summary(mod.offspring)
