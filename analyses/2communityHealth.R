@@ -5,9 +5,9 @@ library(piecewiseSEM)
 library(lme4)
 library(car)
 
-load("../data/indiv.data.Rdata")
-load("../data/site.data.Rdata")
-load("../data/repro.block.Rdata")
+load("../data/indivdata.Rdata")
+load("../data/sitedata.Rdata")
+load("../data/reproblock.Rdata")
 
 
 ## *************************************************************
