@@ -9,7 +9,7 @@ source('src/pcoa.R')
 # Make a PCOA Based on Broadleaf cover, a measure of management intensity
 # *************************************************************************
 
-load("../data/indiv.data.Rdata")
+load("../data/indivdata.Rdata")
 
 hist(indiv.data$BLcover, breaks=30)
 
