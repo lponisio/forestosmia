@@ -1,4 +1,5 @@
-## setwd("~/Dropbox/forestosmia")
+setwd('/Volumes/bombus/Dropbox (University of Oregon)/forestosmia')
+
 setwd("analyses")
 rm(list=ls())
 library(vegan)
@@ -13,30 +14,18 @@ load("../data/indivdata.Rdata")
 
 hist(indiv.data$BLcover, breaks=30)
 
-indiv.data$StandRank <- "low"
-indiv.data$StandRank[indiv.data$BLcover >= 7 &
-                       indiv.data$BLcover <= 12] <- "medium"
-
-indiv.data$StandRank[indiv.data$BLcover >= 13 &
-                       indiv.data$BLcover <= 18] <- "high"
-
-indiv.data$StandRank[indiv.data$BLcover >= 19] <- "very high"
-
-
 infections <- c("Apicystis", "Crithidia", "Ascophaera")
-
 Stand <- indiv.data$Stand
-
 
 ## PCOA by stand intensity
 parasite.comms <- calcPcoa(indiv.data, infections, nperm=1000,
-                           indiv.data$StandRank)
-
+                           indiv.data$StandIntensity)
 parasite.comms$tests
 
 # plotting
-plotCommDist(indiv.data$dist$dist, parasite.comms$dist$sites,
+plotCommDist(parasite.comms$dist$dist, parasite.comms$dist$sites,
              "parasite_stand_intensity2")
+
 
 # *************************************************************************
 # Make a PCOA Based on Site
