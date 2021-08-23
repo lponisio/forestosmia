@@ -1,225 +1,264 @@
-## setwd("~/Dropbox/forestosmia")
+setwd('/Volumes/bombus/Dropbox (University of Oregon)/forestosmia')
 setwd("analyses")
 rm(list=ls())
 library(piecewiseSEM)
 library(lme4)
 library(car)
+library(ggplot2)
+library(viridis)
 
 load("../data/indivdata.Rdata")
 load("../data/sitedata.Rdata")
 load("../data/reproblock.Rdata")
 
-
-## *************************************************************
-## make formulas for path analyses
-## *************************************************************
-
-
 ## **********************************************************
 ## formula for site effects on the bee community
 ## **********************************************************
+## tree richness, canopy and DBH are colinear
 
-site.data <- site.data[!is.na(site.data$InfectedIndividuals),]
+vars <- c("BLcover",
+          "FlowerDiversity",
+          "MeanBloomAbund",
+          "MeanBeeDiversity",
+          "MeanBeeAbund",
+          "AgePoly1",
+          "AgePoly2",
+          "AgePoly3",
+          "AgePoly4"
+          )
 
+site.data[, vars] <- apply(site.data[, vars], 2, scale)
+indiv.data[, vars] <- apply(indiv.data[, vars], 2, scale)
+repro.block[, vars] <- apply(repro.block[, vars], 2, scale)
+repro.block$ParasitismRate <- scale(repro.block$ParasitismRate)
 
-formula.bee <- formula(MeanBeeRichness ~
-                         scale(BLcover) +
-                         scale(MeanCanopy) + scale(TreeRichness) +  scale(MeanDBH)
-                       + scale(MeanBloomAbund))
-#+ scale(FlowerRichness) 
+## flower diversity
+formula.flower.div <- formula(FlowerDiversity ~
+                                  (BLcover) +
+                                  (AgePoly1) +
+                                  (AgePoly2) +
+                                  (AgePoly3) +
+                                  (AgePoly4)
+                              )
+## flower abund
+formula.flower.abund <- formula(MeanBloomAbund ~
+                                    (BLcover) +
+                                    (AgePoly1) +
+                                    (AgePoly2) +
+                                    (AgePoly3) +
+                                    (AgePoly4)
+                                )
 
-summary(lm(formula.bee,
-           data = site.data))
+## **********************************************************
+## formula for forest effects on bee community
+## **********************************************************
+## bee diversity
+formula.bee.div <- formula(MeanBeeDiversity ~
+                               (BLcover) +
+                               (MeanBloomAbund) +
+                               ## (MeanBeeAbund) +
+                               (FlowerDiversity) +
+                               (AgePoly1) +
+                               (AgePoly2)
+                               ## (AgePoly3)
+                           )
 
-vif(lm(formula.bee,
-       data = site.data))
+## bee abund
+formula.bee.abund <- formula(MeanBeeAbund ~
+                                 (BLcover) +
+                                 (MeanBloomAbund) +
+                                 (FlowerDiversity) +
+                                 (AgePoly1) +
+                                 (AgePoly2)
+                                 ## (AgePoly3)
+                             )
 
+## **********************************************************
+## SEM bees and flowers
+## **********************************************************
 
-## *****
+bees.flowers= psem(
+    plants = lm(formula.flower.abund,
+                      data = site.data),
+    plants2 = lm(formula.flower.div,
+                       data = site.data),
+    bees = lm(formula.bee.abund,
+                    data = site.data),
+    bees2 = lm(formula.bee.div,
+                     data = site.data)
+)
 
-formula.bee <- formula(MeanBeeAbund ~
-                         scale(BLcover) +
-                         scale(MeanCanopy) + scale(TreeRichness) + scale(MeanDBH) + 
-                         #scale(FlowerRichness) + 
-                         scale(MeanBloomAbund))
-
-summary(lm(formula.bee,
-           data = site.data))
+summary(bees.flowers)
+dTable <- dSep(bees.flowers)
+dTable
+fisherC(dTable)
 
 ## **********************************************************
 ## formula for bee community effects on parasitism
 ## **********************************************************
 
-formula.parasite <- formula(cbind(InfectedIndividuals,
-                                  TestedTotals)~
-                              scale(MeanBeeRichness))
+## Apicystis Ascophaera Crithidia AnyParasite
 
-parasite.mod <-  glm(formula.parasite,
-                     data = site.data,
-                     family="binomial")
-summary(parasite.mod)
+## bee abund and bloom abund colinear
 
-## **** with abundance
+site.data.par <- site.data[!is.na(site.data$InfectedIndividuals),]
+## cannot use cbind in peicewise SEM
 
-formula.parasite <- formula(cbind(InfectedIndividuals,
-                                  TestedTotals)~
-                              scale(MeanBeeAbund))
-
-parasite.mod <-  glm(formula.parasite,
-                     data = site.data,
-                     family="binomial")
-summary(parasite.mod)
-
-## tried above with InfectedCrith, InfectedAsco, InfectedApicys
-
-## *****try it out with other variables
-
-formula.parasite <- formula(cbind(InfectedCrith,
-                                  TestedTotals)~
-                              scale(MeanBeeRichness)
-                            + scale(TreeRichness) 
-                            + scale(BLcover)
-                            + scale(MeanCanopy)
-                            + scale(MeanBloomAbund) 
-                            + scale(MeanDBH))
-                           # + scale(FlowerRichness))
-
-parasite.mod <-  glm(formula.parasite,
-                     data = site.data,
-                     family="binomial")
-summary(parasite.mod)
+formula.parasite.site <- formula(AnyParasite ~
+                                     (MeanBeeAbund) +
+                                     (MeanBeeDiversity) +
+                                     (MeanBloomAbund) +
+                                     (FlowerDiversity) +
+                                     (1|Stand)
+                                 )
 
 
-vif(parasite.mod)
+## **********************************************************
+## SEM parasitism
+## **********************************************************
+indiv.data$Stand <- as.factor(indiv.data$Stand)
+
+## trying with the quasi poison and offspet fro total screened,
+## dispersion permaters looks silly
+bees.flowers.par= psem(
+    plants = lm(formula.flower.abund,
+                data = site.data),
+    plants2 = lm(formula.flower.div,
+                 data = site.data),
+    bees = lm(formula.bee.abund,
+              data = site.data),
+    bees2 = lm(formula.bee.div,
+               data = site.data),
+    par = glm(formula=formula.parasite.site,
+              data = site.data.par,
+              offset=site.data.par$TestedTotals,
+              family="quasipoisson")
+)
+
+summary(glm(formula=formula.parasite.site,
+                       data = site.data.par,
+                       offset=site.data.par$TestedTotals,
+                       family="quasipoisson"))
+
+
+##
+bees.flowers.par= psem(
+    plants = lm(formula.flower.abund,
+                data = site.data),
+    plants2 = lm(formula.flower.div,
+                 data = site.data),
+    bees = lm(formula.bee.abund,
+              data = site.data),
+    bees2 = lm(formula.bee.div,
+               data = site.data),
+    par = glmer(formula=formula.parasite.site,
+              data = indiv.data,
+              family="binomial",
+              glmerControl(optimizer="bobyqa"))
+)
+
+summary(bees.flowers.par)
+dTable <- dSep(bees.flowers.par)
+dTable
+fisherC(dTable)
+
+summary(glmer(formula=formula.parasite.site,
+              data = indiv.data,
+              family="binomial"))
+
+
+## try to be at the site level with infected, total tested
+## bees.flowers.par= psem(
+##                   plants = lm(formula.flower.abund,
+##                               data = site.data.par),
+##                   plants2 = lm(formula.flower.div,
+##                                data = site.data.par),
+##                   bees = lm(formula.bee.abund,
+##                             data = site.data.par),
+##                   bees2 = lm(formula.bee.div,
+##                              data = site.data.par),
+##                   par = do.call(glm,
+##                                 list(formula=formula.parasite.site,
+
+##                                      data = site.data.par,
+##                                      weights=site.data.par$TestedTotals,
+##                                      family="binomial"))
+##               )
+
+
+## results are different than above, not as many stands that have
+## parasite data
 
 ## **********************************************************
 ## formulas for the site effects on nest reproductiom
 ## **********************************************************
+repro.block$Block <- as.factor(repro.block$Block)
+repro.block$Stand <- as.factor(repro.block$Stand)
 
-ys <- c("FM_ratio", "SumOffspring", "Females")
+ys <- c("SumOffspring", "Females")
 
-#xvar.NestRepro <- c("scale(ParasitismRate)")
-
-xvar.NestRepro <- c("scale(ParasitismRate)",
-                    "scale(MeanBeeRichness)",
-                    "scale(BLcover)",
-                    "scale(TreeRichness)",
-                    "scale(MeanCanopy)",
-                    "scale(MeanBloomAbund)", 
-                    "scale(MeanDBH)")
-
-                    #"scale(FlowerRichness)")
+xvar.NestRepro <- c("(ParasitismRate)",
+                    "(BLcover)",
+                    "(MeanBloomAbund)",
+                    "(FlowerDiversity)",
+                    "(MeanBeeAbund)",
+                    "(MeanBeeDiversity)")
 
 formulas.NestRepro <-lapply(ys, function(x) {
   as.formula(paste(x, "~",
                    paste(paste(xvar.NestRepro, collapse="+"),
-                         "(1|Stand)", "(1|Block)",
+                         "(1|Stand)", ## "(1|Block)",
                          sep="+")))
 })
 
+mod <- lmer(formulas.NestRepro[[1]], data=repro.block)
 
-## offspring
-repro.mod <- glmer(formulas.NestRepro[[2]],
-                   family="poisson",
-                   data = repro.block)
+## it's count data, but numbers are big and few 0, resid look perfect!
+plot(density(residuals(mod)))
 
-summary(repro.mod)
-## plot(density(residuals(repro.mod)))
+flowers.repro= psem(
+    plants = lm(formula.flower.abund,
+                data = site.data),
+    plants2 = lm(formula.flower.div,
+                 data = site.data),
+    bees = lm(formula.bee.abund,
+              data = site.data),
+    bees2 = lm(formula.bee.div,
+               data = site.data),
+    nest= lmer(formulas.NestRepro[[1]],
+                data = repro.block)
+)
 
-## *****
-## fm ratio
-fm.mod <- lmer(formulas.NestRepro[[1]],
-               data = repro.block)
+summary(flowers.repro)
 
-summary(fm.mod)
-
-vif(fm.mod)
-
-
-## *****
-## females
-f.mod <- glmer(formulas.NestRepro[[3]],
-               data = repro.block,
-               family="poisson")
-
-summary(f.mod)
-
-vif(f.mod)
-
-#********with bee abund
-
-ys <- c("FM_ratio", "SumOffspring", "Females")
-
-#xvar.NestRepro <- c("scale(ApicysRate)")
-
-xvar.NestRepro <- c("scale(ParasitismRate)",
-                    "scale(MeanBeeAbund)",
-                    "scale(BLcover)",
-                    "scale(TreeRichness)",
-                    "scale(MeanCanopy)",
-                    "scale(MeanBloomAbund)", 
-                    "scale(MeanDBH)")
-
-formulas.NestRepro <-lapply(ys, function(x) {
-  as.formula(paste(x, "~",
-                   paste(paste(xvar.NestRepro, collapse="+"),
-                         "(1|Stand)", "(1|Block)",
-                         sep="+")))
-})
+dTable <- dSep(flowers.repro)
+dTable
+fisherC(dTable)
 
 
-## offspring
-repro.mod <- glmer(formulas.NestRepro[[2]],
-                   family="poisson",
-                   data = repro.block)
+## same results
 
-summary(repro.mod)
-## plot(density(residuals(repro.mod)))
+flowers.repro.f= psem(
+   plants = lm(formula.flower.abund,
+                data = site.data),
+    plants2 = lm(formula.flower.div,
+                 data = site.data),
+    bees = lm(formula.bee.abund,
+              data = site.data),
+    bees2 = lm(formula.bee.div,
+               data = site.data),
+    nest= lmer(formulas.NestRepro[[2]],
+                data = repro.block)
+)
 
-## *****
-## fm ratio
-fm.mod <- lmer(formulas.NestRepro[[1]],
-               data = repro.block)
+summary(flowers.repro.f)
 
-summary(fm.mod)
-
-## *****
-## females
-f.mod <- glmer(formulas.NestRepro[[3]],
-               data = repro.block,
-               family="poisson")
-
-summary(f.mod)
-
-
-vif(f.mod)
-## *************************************************************
-
-mod.offspring  <-  psem(
-  Bee = lm(formula.bee,
-           data = site.data),
-  Parasite = glm(formula.parasite,
-                 data = site.data,
-                 family="binomial"),
-  NestRepro = lmer(formulas.NestRepro[[2]],
-                   data = repro.block))
-
-
-summary(mod.offspring)
-
-lapply(osmia.mods, rsquared)
+dTable <- dSep(flowers.repro.f)
+dTable
+fisherC(dTable)
 
 
 
 ## *************************************************************
-## sanity check using a linear models of Any Parasite
-## *************************************************************
 
 
-bee.par.mod <- lm(AnyParasite ~ BLcover + MeanDBH +
-                    TreeRichness + FlowerRichness,
-                  data=site.data)
-AIC(bee.par.mod)
-vif(bee.par.mod)
-summary(bee.par.mod)
-plot(density(bee.par.mod$resid))
