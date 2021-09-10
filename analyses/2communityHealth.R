@@ -118,27 +118,27 @@ formula.parasite.site <- formula(AnyParasite ~
 ## **********************************************************
 indiv.data$Stand <- as.factor(indiv.data$Stand)
 
-## trying with the quasi poison and offspet fro total screened,
-## dispersion permaters looks silly
-bees.flowers.par= psem(
-    plants = lm(formula.flower.abund,
-                data = site.data),
-    plants2 = lm(formula.flower.div,
-                 data = site.data),
-    bees = lm(formula.bee.abund,
-              data = site.data),
-    bees2 = lm(formula.bee.div,
-               data = site.data),
-    par = glm(formula=formula.parasite.site,
-              data = site.data.par,
-              offset=site.data.par$TestedTotals,
-              family="quasipoisson")
-)
+## ## trying with the quasi poison and offset for total screened,
+## ## dispersion permaters looks silly
+## bees.flowers.par= psem(
+##     plants = lm(formula.flower.abund,
+##                 data = site.data),
+##     plants2 = lm(formula.flower.div,
+##                  data = site.data),
+##     bees = lm(formula.bee.abund,
+##               data = site.data),
+##     bees2 = lm(formula.bee.div,
+##                data = site.data),
+##     par = glm(formula=formula.parasite.site,
+##               data = site.data.par,
+##               offset=site.data.par$TestedTotals,
+##               family="quasipoisson")
+## )
 
-summary(glm(formula=formula.parasite.site,
-                       data = site.data.par,
-                       offset=site.data.par$TestedTotals,
-                       family="quasipoisson"))
+## summary(glm(formula=formula.parasite.site,
+##                        data = site.data.par,
+##                        offset=site.data.par$TestedTotals,
+##                        family="quasipoisson"))
 
 
 ##

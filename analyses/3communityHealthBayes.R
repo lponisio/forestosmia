@@ -1,18 +1,21 @@
 setwd('/Volumes/bombus/Dropbox (University of Oregon)/forestosmia')
 setwd("analyses")
 rm(list=ls())
-library(piecewiseSEM)
-library(lme4)
-library(car)
 library(ggplot2)
 library(viridis)
 library(brms)
+library(bayesplot)
+library(tidybayes)
+library(tidyverse)
 
 load("../data/indivdata.Rdata")
 load("../data/sitedata.Rdata")
 load("../data/reproblock.Rdata")
 
-ncores <- 10
+source("src/writeResultsTable.R")
+source("src/makeMultiLevelData.R")
+
+ncores <- 4
 
 ## **********************************************************
 ## formula for site effects on the bee community
@@ -25,57 +28,36 @@ repro.block <- repro.block[order(repro.block$Stand),]
 ## different levels to get around the issue of having to pass in one
 ## data set into brms
 
-site.ids <- unlist(tapply(indiv.data$Stand,
-                          indiv.data$Stand,
-                          function(x) 1:length(x)))
-names(site.ids) <- NULL
-indiv.data$SiteIDs <- site.ids
-indiv.data$Weights <- indiv.data$SiteIDs
-indiv.data$Weights[indiv.data$Weights > 1] <- 0
-
-
-site.ids <- unlist(tapply(repro.block$Stand,
-                          repro.block$Stand,
-                          function(x) 1:length(x)))
-names(site.ids) <- NULL
-repro.block$SiteIDs <- site.ids
-repro.block$Weights <- repro.block$SiteIDs
-repro.block$Weights[repro.block$Weights > 1] <- 0
-
 ## flower richness
 
-vars <- c("BLcover",
+vars <- c("TreeRichness",
           "FlowerDiversity",
           "MeanBloomAbund",
           "MeanBeeDiversity",
           "MeanBeeAbund",
-          "AgePoly1",
-          "AgePoly2",
-          "AgePoly3",
-          "AgePoly4"
+          "Age"
+          ## "RoseDiversity",
+          ## "RoseMeanBloomAbund"
           )
 
 site.data[, vars] <- apply(site.data[, vars], 2, scale)
 indiv.data[, vars] <- apply(indiv.data[, vars], 2, scale)
 repro.block[, vars] <- apply(repro.block[, vars], 2, scale)
-repro.block$ParasitismRate <- scale(repro.block$ParasitismRate)
+repro.block$ParasitismRate <- scale(log(repro.block$ParasitismRate))
+
+repro.block <- makeDataMultiLevel(repro.block, "Stand")
+indiv.data <- makeDataMultiLevel(indiv.data, "Stand")
 
 
 ## flower diversity
 formula.flower.div <- formula(FlowerDiversity | weights(Weights) ~
-                                  (BLcover) +
-                                  (AgePoly1) +
-                                  (AgePoly2) +
-                                  (AgePoly3) +
-                                  (AgePoly4)
+                                  ## (ManagementIntensity) +
+                                  s(Age)
                               )
 ## flower abund
 formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
-                                    (BLcover) +
-                                    (AgePoly1) +
-                                    (AgePoly2) +
-                                    (AgePoly3) +
-                                    (AgePoly4)
+                                    ## (ManagementIntensity) +
+                                        s(Age)
                                 )
 
 ## **********************************************************
@@ -84,61 +66,79 @@ formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
 
 ## bee diversity
 formula.bee.div <- formula(MeanBeeDiversity | weights(Weights)~
-                               (BLcover) +
+                               ## (ManagementIntensity) +
                                (MeanBloomAbund) +
-                               ## (MeanBeeAbund) +
                                (FlowerDiversity) +
-                               (AgePoly1) +
-                               (AgePoly2)
+                                   s(Age)
 
                            )
 
 ## bee abund
 formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
-                                 (BLcover) +
+                                 ## (ManagementIntensity) +
                                  (MeanBloomAbund) +
                                  (FlowerDiversity) +
-                                 (AgePoly1) +
-                                 (AgePoly2)
+                                     s(Age)
+
                              )
+
 ## **********************************************************
 ## formula for bee community effects on parasitism
 ## **********************************************************
 
 formula.parasite <- formula(AnyParasite ~
+                                MeanBeeAbund +
+                                FlowerDiversity +
+                                MeanBeeDiversity +
+                                MeanBloomAbund +
+                                (1|Stand)
+                            )
+
+formula.parasite.site <- formula(ParasitismRate | weights(Weights) ~
                                      (MeanBeeAbund) +
                                      (MeanBeeDiversity) +
                                      (MeanBloomAbund) +
-                                (FlowerDiversity)+
-                                (1|Stand)
+                                     (FlowerDiversity)
                                  )
 
+
 ## **********************************************************
-## SEM parasitism
+## community models
 ## **********************************************************
-
-
-
-
 bf.fabund <- bf(formula.flower.abund)
 bf.fdiv <- bf(formula.flower.div)
 bf.babund <- bf(formula.bee.abund)
 bf.bdiv <- bf(formula.bee.div)
+
+prior <- c(set_prior("normal(0,1)", class="b"))
+
+## **********************************************************
+## SEM parasitism
+## **********************************************************
 
 bf.par <- bf(formula.parasite, family="bernoulli")
 
 bform <- bf.fabund + bf.fdiv + bf.babund + bf.bdiv + bf.par +
     set_rescor(FALSE)
 
-prior <- c(set_prior("normal(0,1)", class="b"))
 
 fit <- brm(bform, indiv.data,
            cores=ncores,
            iter = 10^5,
            chains = 4,
-           prior=prior,
+           thin=2,
+           inits=0,
+           ## prior=prior,
            control = list(adapt_delta = 0.99))
 
+write.ms.table(fit, "parasitism")
+
+mcmc_trace(fit)
+ggsave("figures/diagnostics/parasite.pdf",
+       height=11, width=8.5)
+
+save(fit, site.data, indiv.data,
+     file="saved/parasiteFitMod.Rdata")
 
 ## **********************************************************
 ## formulas for the site effects on nest reproductiom
@@ -147,12 +147,19 @@ fit <- brm(bform, indiv.data,
 ys <- c("SumOffspring",
         "Females")
 
-xvar.NestRepro <- c("(ParasitismRate)",
-                    "(BLcover)",
+bf.par.site <- bf(formula.parasite.site)
+
+
+xvar.NestRepro <- c("ParasitismRate",
+                    ## "(ManagementIntensity)",
                     "(MeanBloomAbund)",
                     "(FlowerDiversity)",
                     "(MeanBeeAbund)",
                     "(MeanBeeDiversity)")
+
+                    ## "RoseMeanBloomAbund", ## no effect
+                    ## "RoseDiversity"
+
 
 formulas.NestRepro <-lapply(ys, function(x) {
   as.formula(paste(x, "~",
@@ -163,19 +170,31 @@ formulas.NestRepro <-lapply(ys, function(x) {
 
 bf.offspring <- bf(formulas.NestRepro[[1]], family="poisson")
 
-bform2 <- bf.fabund + bf.fdiv + bf.babund + bf.bdiv +
+## bform2 <- bf.fabund + bf.fdiv + bf.babund + bf.bdiv +  bf.par.site +
+##     bf.offspring +
+##     set_rescor(FALSE)
+
+bform2 <-   bf.par.site +
     bf.offspring +
     set_rescor(FALSE)
 
+
 fit2 <- brm(bform2, repro.block,
            cores=ncores,
-           iter = 10^4,
-           chains = 3,
-           control = list(adapt_delta = 0.99),
-           prior=prior)
+           iter = 10^5,
+           chains = 4,
+           inits=0,
+           ## prior=prior,
+           thin=2,
+           control = list(adapt_delta = 0.99,
+                          max_treedepth = 15))
+
+write.ms.table(fit2, "offspring")
 
 
+mcmc_trace(fit2)
+ggsave("figures/diagnostics/offspring.pdf",
+       height=11, width=8.5)
 
-## *************************************************************
-
-
+save(fit2, repro.block,
+     file="saved/offspringFitMod.Rdata")
