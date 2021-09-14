@@ -35,7 +35,8 @@ vars <- c("TreeRichness",
           "MeanBloomAbund",
           "MeanBeeDiversity",
           "MeanBeeAbund",
-          "Age"
+          "Age",
+          "Elev"
           ## "RoseDiversity",
           ## "RoseMeanBloomAbund"
           )
@@ -48,16 +49,17 @@ repro.block$ParasitismRate <- scale(log(repro.block$ParasitismRate))
 repro.block <- makeDataMultiLevel(repro.block, "Stand")
 indiv.data <- makeDataMultiLevel(indiv.data, "Stand")
 
+indiv.data$Owner <- factor(indiv.data$Owner,
+                    levels= c("Starker", "Hancock", "ODF", "Weyco"))
+
 
 ## flower diversity
 formula.flower.div <- formula(FlowerDiversity | weights(Weights) ~
-                                  ## (ManagementIntensity) +
-                                  s(Age)
+                                  (Owner) + s(Age) + Elev
                               )
 ## flower abund
 formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
-                                    ## (ManagementIntensity) +
-                                        s(Age)
+                                    (Owner) + s(Age) + Elev
                                 )
 
 ## **********************************************************
@@ -66,19 +68,19 @@ formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
 
 ## bee diversity
 formula.bee.div <- formula(MeanBeeDiversity | weights(Weights)~
-                               ## (ManagementIntensity) +
+                               ## (OwnerClass) +
                                (MeanBloomAbund) +
                                (FlowerDiversity) +
-                                   s(Age)
+                               s(Age)
 
                            )
 
 ## bee abund
 formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
-                                 ## (ManagementIntensity) +
+                                 ## (OwnerClass) +
                                  (MeanBloomAbund) +
                                  (FlowerDiversity) +
-                                     s(Age)
+                                 s(Age)
 
                              )
 
@@ -124,9 +126,9 @@ bform <- bf.fabund + bf.fdiv + bf.babund + bf.bdiv + bf.par +
 
 fit <- brm(bform, indiv.data,
            cores=ncores,
-           iter = 10^5,
+           iter = 10^4,
            chains = 4,
-           thin=2,
+           thin=1,
            inits=0,
            ## prior=prior,
            control = list(adapt_delta = 0.99))
@@ -151,8 +153,7 @@ bf.par.site <- bf(formula.parasite.site)
 
 
 xvar.NestRepro <- c("ParasitismRate",
-                    ## "(ManagementIntensity)",
-                    "(MeanBloomAbund)",
+                   "(MeanBloomAbund)",
                     "(FlowerDiversity)",
                     "(MeanBeeAbund)",
                     "(MeanBeeDiversity)")
