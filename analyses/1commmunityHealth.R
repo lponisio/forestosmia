@@ -111,7 +111,7 @@ formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
 ## **********************************************************
 
 formula.parasite <- formula(AnyParasite | weights(WeightsPar) ~
-                                MeanBeeAbund*
+                                MeanBeeAbund +
                                 FlowerDiversity +
                                 MeanBeeDiversity +
                                 MeanBloomAbund +
