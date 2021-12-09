@@ -13,11 +13,7 @@ setwd("forestosmia_saved")
 parasite <- read.csv("data/parasite.csv",
                      stringsAsFactors=FALSE)
 
-dbh <- read.csv("data/dbh.csv",
-                stringsAsFactors=FALSE, na.strings=c("","NA"))
-
 floral <- read.csv("data/floral2.csv", stringsAsFactors=FALSE)
-
 
 repro <- read.csv("data/reproductive.csv",
                   stringsAsFactors=FALSE)
@@ -25,278 +21,13 @@ repro <- read.csv("data/reproductive.csv",
 standinfo <- read.csv("data/standinfo.csv",
                       stringsAsFactors=FALSE)
 
-vegcover <- read.csv("data/vegcover.csv",
-                     stringsAsFactors=FALSE)
-
 insect <- read.csv("data/insect-all.csv",
                    stringsAsFactors=FALSE)
-
-foraging <- read.csv("data/osmiaforaging.csv",
-                     stringsAsFactors=FALSE)
 
 source("../forestosmia/dataPrep/src/siteNames.R")
 source("../forestosmia/dataPrep/src/misc.R")
 
 dir <- "cleaneddata"
-
-## **********************************************************
-## stand level calculations
-## **********************************************************
-
-standinfo$AgePoly1 <-  poly(standinfo$Age,3)[,1]
-standinfo$AgePoly2 <-  poly(standinfo$Age,3)[,2]
-standinfo$AgePoly3 <-  poly(standinfo$Age,3)[,3]
-standinfo$AgePoly4 <-  poly(standinfo$Age,4)[,4]
-standinfo$AgePoly5 <-  poly(standinfo$Age,5)[,5]
-
-standinfo$OwnerClass <- "Private"
-standinfo$OwnerClass[standinfo$Owner == "ODF"] <- "Public"
-
-## ***********************************************************
-## veg and stand data
-## ***********************************************************
-
-## calculate stand-level broadleaf cover (stand=site).  keep only data
-## for "broadleaf" trees, srubs, and forbs.  when dropping a variable,
-## check the class with class(vegcover$broadleaf) and if its an
-## integar dont put quotes around 0.
-
-## not sure why this was there before...
-## vegcover <- vegcover[!vegcover$Broadleaf == 0,]
-
-## replace "tr" (tracce) with 1.00
-vegcover$perCover[vegcover$perCover == "tr" |
-                  vegcover$perCover == "TR"|
-                  vegcover$perCover ==  "Tr"]  <- "1.0"
-
-## average abundance of broadleaf cover among plots at a site
-
-vegcover$perCover <- as.numeric(vegcover$perCover)
-
-vegcover$Species[vegcover$Species ==
-                 "Cedar"]  <- "THUPLI"
-vegcover$Species[vegcover$Species ==
-                 "CLIVUL ?"]  <- "CLIVUL"
-vegcover$Species[vegcover$Species ==
-                 "CLIVUL?"]  <- "CLIVUL"
-vegcover$Species[vegcover$Species ==
-                 "Coral root ?"]  <- "Corallorhiza sp."
-vegcover$Species[vegcover$Species ==
-                 "Graminoid"]  <- "Graminoid spp."
-vegcover$Species[vegcover$Species ==
-                 "graminoids"]  <- "Graminoid spp."
-vegcover$Species[vegcover$Species ==
-                 "Graminoids"]  <- "Graminoid spp."
-vegcover$Species[vegcover$Species ==
-                 "gramminoid"]  <- "Graminoid spp."
-vegcover$Species[vegcover$Species ==
-                 "Equisetum sp"]  <- "Equisetum sp."
-vegcover$Species[vegcover$Species ==
-                 "EQU sp."]  <- "Equisetum sp."
-vegcover$Species[vegcover$Species ==
-                 "MAI sp."]  <- "Maianthemum sp."
-vegcover$Species[vegcover$Species ==
-                 "MaianthemumSp"]  <- "Maianthemum sp."
-vegcover$Species[vegcover$Species ==
-                 "RibesSp"]  <- "Ribes sp."
-vegcover$Species[vegcover$Species ==
-                 "ROS sp."]  <- "Rosa spp."
-vegcover$Species[vegcover$Species ==
-                 "Rosa sp."]  <- "Rosa spp."
-vegcover$Species[vegcover$Species ==
-                 "RosaSp"]  <- "Rosa spp."
-vegcover$Species[vegcover$Species ==
-                 "RUB sp."]  <- "Rubus sp."
-vegcover$Species[vegcover$Species ==
-                 "RUM sp."]  <- "Rumex sp."
-vegcover$Species[vegcover$Species ==
-                 "RUMEX sp."]  <- "Rumex sp."
-vegcover$Species[vegcover$Species ==
-                 "ViolaSp"]  <- "Viola sp."
-vegcover$Species[vegcover$Species ==
-                 "Violet sp."]  <- "Viola sp."
-vegcover$Species[vegcover$Species ==
-                 "VACPAR?"]  <- "VACPAR"
-
-vegcover$Species[vegcover$Species ==
-                 "Lady fern?"]  <- "ATHFIL"
-vegcover$Species[vegcover$Species ==
-                 "LUP sp."]  <- "LUPRIV"
-vegcover$Species[vegcover$Species ==
-                 "PearlyEverlasting"]  <- "ANAMAR"
-vegcover$Species[vegcover$Species ==
-                 "RHAPER"]  <- "RHAPUR"
-vegcover$Species[vegcover$Species ==
-                 "RUBULA leaf?"]  <- "RUBLAC"
-vegcover$Species[vegcover$Species ==
-                 "Rupertia physodes"]  <- "RUPPHY"
-vegcover$Species[vegcover$Species ==
-                 "sedge"]  <- "CARROS"
-vegcover$Species[vegcover$Species ==
-                 "SENJAC ?"]  <- "Senecio spp."
-vegcover$Species[vegcover$Species ==
-                 "SENSAC ?"]  <- "Senecio spp."
-vegcover$Species[vegcover$Species ==
-                 "Sword fern"]  <- "POLMUN"
-vegcover$Species[vegcover$Species ==
-                 "Thistle"]  <- "Cirsium sp."
-vegcover$Species[vegcover$Species ==
-                 "VAC red ?"]  <- "VACPAR"
-vegcover$Species[vegcover$Species ==
-                 "VAC red?"]  <- "VACPAR"
-vegcover$Species[vegcover$Species ==
-                 "White hawksbeard"]  <- "Crepis sp."
-
-## lost data
-vegcover$Species[vegcover$Species ==
-                 "Unknown forb"]  <- NA
-vegcover$Species[vegcover$Species ==
-                 "small purple ?"]  <- NA
-vegcover$Species[vegcover$Species ==
-                 "Pea"]  <- NA
-vegcover$Species[vegcover$Species ==
-                 "Goth plant ?"]  <- NA
-vegcover$Species[vegcover$Species ==
-                 "SRSW duckfoot?"]  <- NA
-
-
-
-BLcover.stand <- tapply(vegcover$perCover[vegcover$Broadleaf == 1],
-                        vegcover$Stand[vegcover$Broadleaf == 1],
-                        mean, na.rm=TRUE)
-## add BL Cover as a new column on our stand-level database
-standinfo$BLcover <- c(BLcover.stand[match(standinfo$Stand,
-                                           names(BLcover.stand))])
-
-standinfo$BLcover[is.na(standinfo$BLcover)] <- 0
-
-## ***********************************************************
-##  dbh
-## ***********************************************************
-
-## let's remove the columns that are not correctly filled out
-dbh$LiveorDead <- NULL
-dbh$SlopePerc <- NULL
-dbh$Aspect <- NULL
-
-## Right now blanks are assigned as NA, but a blank TreeNum means no
-## trees, which we actually want to account for.  If there's an NA
-## under TreeNum and DBH, make it zeroes
-
-dbh$TreeNum[is.na(dbh$TreeNum)] <- 999 # place holder for missing tree number
-dbh$DBH[is.na(dbh$DBH)] <- 0
-
-dbh <- dbh[!is.na(dbh$Species),]
-
-## we want tree species richness, tree species abundance, tree DBH
-## averaged across trees at a site
-
-dbh$DBH <- as.numeric(dbh$DBH)
-dbh$TreeNum <- as.numeric(dbh$TreeNum)
-
-
-dbh$Owner <- standinfo$Owner[match(dbh$Stand,
-                                   standinfo$Stand)]
-
-dbh$Age <- standinfo$Age[match(dbh$Stand,
-                                   standinfo$Stand)]
-
-stand.sum <- dbh %>%
-    group_by(Stand) %>%
-    summarise(TreeRichness = length(unique(Species)),
-              TreeDiversity=vegan:::diversity(table(Species),
-                                              index="shannon"),
-              TreeAbund=length(TreeNum),
-              MeanDBH=mean(DBH, na.rm=TRUE))
-
-
-stand.sum.sp <- dbh %>%
-    group_by(Stand, Species) %>%
-    summarise(TreeAbund=length(TreeNum),
-              MeanDBH=mean(DBH, na.rm=TRUE))
-
-stand.div.dbh <- stand.sum.sp  %>%
-    group_by(Stand) %>%
-    summarise(TreeDiversityDBH=vegan:::diversity(MeanDBH,
-                                                 index="shannon"))
-
-stand.sum$TreeDiversityDBH <-
-    stand.div.dbh$TreeDiversityDBH[match(stand.sum$Stand,
-                                         stand.div.dbh$Stand)]
-
-
-dbh.hardwood <- dbh[dbh$Species != "PSEMEN",] ## remove doug fir
-
-stand.sum.hw <- dbh.hardwood %>%
-    group_by(Stand) %>%
-    summarise(HWTreeRichness = length(unique(Species)),
-              HWTreeDiversity=vegan:::diversity(table(Species),
-                                              index="shannon"),
-              HWTreeAbund=length(TreeNum),
-              HWMeanDBH=mean(DBH, na.rm=TRUE))
-
-stand.sum.sp.hardwood <- dbh.hardwood %>%
-    group_by(Stand, Species) %>%
-    summarise(TreeAbund=length(TreeNum),
-              MeanDBH=mean(DBH, na.rm=TRUE))
-
-
-stand.div.dbh.hardwood <- stand.sum.sp.hardwood  %>%
-    group_by(Stand) %>%
-    summarise(TreeDiversityDBH=vegan:::diversity(MeanDBH,
-                                                 index="shannon"))
-
-stand.sum$HWTreeDiversityDBH <-
-    stand.div.dbh.hardwood$TreeDiversityDBH[match(stand.sum$Stand,
-                                         stand.div.dbh.hardwood$Stand)]
-
-
-## then merge to dataset
-standinfo <- merge(standinfo, stand.sum, all.x=TRUE)
-
-standinfo <- merge(standinfo, stand.sum.hw, all.x=TRUE)
-
-standinfo$HWTreeRichness[is.na(standinfo$HWTreeRichness)] <- 0
-standinfo$HWTreeDiversity[is.na(standinfo$HWTreeDiversity)] <- 0
-standinfo$HWTreeAbund[is.na(standinfo$HWTreeAbund)] <- 0
-standinfo$HWMeanDBH[is.na(standinfo$HWMeanDBH)] <- 0
-standinfo$HWTreeDiversityDBH[is.na(standinfo$HWTreeDiversityDBH)] <- 0
-standinfo$TreeDiversityDBH[is.na(standinfo$TreeDiversityDBH)] <- 0
-
-standinfo$ManagementIntensity <- "high"
-standinfo$ManagementIntensity[standinfo$TreeDiversityDBH > 0] <- "low"
-
-f.hist <- function(){
-    layout(matrix(1:6, ncol=3))
-    hist(standinfo$TreeRichness)
-    hist(standinfo$TreeDiversity)
-    hist(standinfo$MeanDBH)
-    hist(standinfo$BLcover)
-    hist(standinfo$TreeDiversityDBH)
-
-}
-pdf.f(f.hist, file="figures/standInfo.pdf", height=8, width=12)
-
-
-
-f.hist <- function(){
-    layout(matrix(1:4, ncol=2))
-    hist(standinfo$HWTreeRichness)
-    hist(standinfo$HWTreeDiversity)
-    hist(standinfo$HWMeanDBH)
-    hist(standinfo$HWTreeDiversityDBH)
-
-}
-pdf.f(f.hist, file="figures/HWstandInfo.pdf", height=8, width=10)
-
-
-owner.sum <- dbh.hardwood %>%
-    group_by(Age, Owner, Stand) %>%
-    summarise(HWTreeRichness = length(unique(Species)),
-              HWTreeDiversity=vegan:::diversity(table(Species),
-                                              index="shannon"),
-              HWTreeAbund=length(TreeNum),
-              HWMeanDBH=mean(DBH, na.rm=TRUE))
 
 ## ***********************************************************
 ## parasite data
@@ -379,7 +110,6 @@ pdf.f(f.hist, file="figures/parasitism.pdf", height=12, width=4)
 ## we want abundance flowers (abundflw), richness flowering species
 ## (richnessflwingsp), and abundfloweringsp
 
-## let's drop the column "vials" since it's not correctly filled out
 floral$Vials <- NULL
 floral$Other_flowers <- NULL
 floral$Notes <- NULL
@@ -437,36 +167,6 @@ standinfo$FlowerRichness[is.na(standinfo$FlowerRichness)] <- 0
 standinfo$FlowerDiversity[is.na(standinfo$FlowerDiversity)] <- 0
 
 
-## Rosaceae for Osmia
-rose <- floral[floral$Family == "Rosaceae",]
-
-rose.sum <- rose %>%
-    group_by(Stand, Transect) %>%
-    summarise(RoseRichness =
-                  length(unique(Flower_sci)),
-              RoseDiversity=
-                  vegan:::diversity(table(Flower_sci),
-                                    index="shannon"),
-              RoseBloomAbund=sum(Blooms, na.rm=TRUE),
-              RoseStemAbund=sum(Stems, na.rm=TRUE),
-              RoseCanopyCover=mean(Canopy_cent,  na.rm=TRUE))
-
-mean.rose <- rose.sum %>%
-    group_by(Stand) %>%
-    summarise(RoseRichness = mean(RoseRichness, na.rm=TRUE),
-              RoseDiversity = mean(RoseDiversity, na.rm=TRUE),
-              RoseMeanBloomAbund=mean(RoseBloomAbund, na.rm=TRUE),
-              RoseMeanStemAbund=mean(RoseStemAbund, na.rm=TRUE),
-              RoseMeanCanopy=mean(RoseCanopyCover,  na.rm=TRUE))
-
-standinfo <- merge(standinfo, mean.rose, all.x=TRUE)
-
-standinfo$RoseMeanBloomAbund[is.na(standinfo$RoseMeanBloomAbund)] <- 0
-standinfo$RoseRichness[is.na(standinfo$RoseRichness)] <- 0
-standinfo$RoseDiversity[is.na(standinfo$RoseDiversity)] <- 0
-
-
-
 f.hist <- function(){
     layout(matrix(1:3, ncol=1))
     hist(standinfo$MeanBloomAbund)
@@ -481,9 +181,6 @@ pdf.f(f.hist, file="figures/floral.pdf",
 ## ***********************************************************
 ## BEE DIVERSITY DATA, MERGE
 ## ***********************************************************
-
-## drop round 3 since it is after the osmia were put out?
-## bee <- bee[!bee$Round == 3,]
 
 insect$Caste <- NULL
 
@@ -518,13 +215,6 @@ bee$GenSp[bee$GenSp  == "Lasioglossum egregium"]  <- NA
 bee$GenSp[bee$GenSp  == "Melissodes sp."]  <- NA
 
 id(bee$GenSp)
-
-## drop count of 0 which are placeholders for sites where no bees
-## where caught. Add back in later
-## bee <- bee[bee$Count == 1,]
-
-## drop unIDed bees
-## bee <- bee[!is.na(bee$GenSp),]
 
 ## generate abundance of bees in each sample round
 ## calculate bee abundance with just net data
@@ -704,83 +394,14 @@ dim(parasite)
 indiv.data <- merge(parasite, standinfo, all=TRUE)
 dim(indiv.data)
 
-## ***********************************************************
-## CLEAN FORAGING DATA, MERGE
-## ***********************************************************
-
-## we are just looking at foraging distance of females from Osmia
-## nests in blocks where samples were not pulled for parasite tests
-
-## ## these columns not filled out entirely, have blanks
-## foraging$videosanalyzedby <- NULL
-## foraging$collectorinitials <- NULL
-## foraging$tempF <- NULL
-## foraging$NumCappedCells <- NULL
-## foraging$videostart.h.min <- NULL
-## foraging$Activity <- NULL
-## foraging$Notes <- NULL
-## foraging$BeeLeaves.h.mm.ss <- NULL
-## foraging$BeeReturns.h.mm.ss <- NULL
-
-## ## drop any data where trip length could not be calculated due to lack
-## ## of footage
-
-## foraging$TripLength.h.mm.ss[foraging$TripLength.h.mm.ss==""] <- NA
-## foraging$TripLength.h.mm.ss[foraging$TripLength.h.mm.ss==" "] <- NA
-## foraging <- na.omit(foraging)
-
-
-## ## BLOCK LEVEL DATA ********
-
-## ## for each stand, average the trip length of females at each block
-## ## end up with Block A averages and Block B averages for each site
-
-## ## conver triplenth from character to time with hms in lubridate package
-## foraging$TripLength.h.mm.ss <- hms(foraging$TripLength.h.mm.ss)
-
-## foraging.block <- foraging %>%
-##     group_by(Stand, NestBlock) %>%
-##     summarise(MeanTripLengthBlock=mean(TripLength.h.mm.ss, na.rm = TRUE))
-
-
-## ## merge to our block-level dataset
-## repro.block <- merge(repro.block, foraging.block)
-
-
-## ## SITE/INDIVIDUAL LEVEL DATASET ********
-
-## ## let's create site-level data and merge onto site and individual
-## ## level datasets
-
-## foraging.stand <- foraging %>%
-##     group_by(Stand) %>%
-##     summarise(MeanTripLengthStand=mean(TripLength.h.mm.ss, na.rm = TRUE))
-
-## ## merge stand-level
-## standinfo <- merge(standinfo, foraging.stand, all.x=TRUE)
-
-## ## merge individual data
-## dim(indiv.data)
-## indiv.data <- merge(indiv.data, foraging.stand, all.x=TRUE)
-## dim(indiv.data)
-
-
 ## *************************************************************
 ## write out final datasets: stand-level, block-level, indiv-level
 ## *************************************************************
 ## we are done with the stand-level dataset, let's rename it
 site.data <- standinfo
 
-## parasite <- merge(parasite, standinfo, all.x=TRUE)
-
 write.csv(indiv.data, file=file.path(dir,
                                      "indivData.csv"), row.names=FALSE)
-
-
-
-## write.csv(parasite, file=file.path(dir,
-##                                    "parasite.csv"), row.names=FALSE)
-
 
 write.csv(standinfo, file=file.path(dir,
                                     "standinfo.csv"), row.names=FALSE)
@@ -794,9 +415,6 @@ save(indiv.data,
      file=file.path(save.dir, "indivdata.Rdata"))
 
 
-## save(parasite,
-##      file=file.path(save.dir, "parasite.Rdata"))
-
 save(repro.block,
      file=file.path(save.dir, "reproblock.Rdata"))
 
@@ -804,235 +422,33 @@ save(site.data,
      file=file.path(save.dir, "sitedata.Rdata"))
 
 
-## **********************************************************
-## data exploration
-## **********************************************************
 
-## p <- ggplot(data=site.data, aes(x=Stand, y=ParasitismRate, fill=MeanBeeAbund)) +
-##     geom_bar(stat="identity") +
-##     labs(y="Proportion infected") +
-##      scale_color_viridis(option = "D")
+## summary stats for ms
 
-## # Horizontal bar plot
-## p + coord_flip()
+only.screened <- indiv.data[!is.na(indiv.data$TestedTotals),]
 
-## ggsave(file="figures/bysite_beeAbund.pdf")
+sites.screened <- unique(only.screened$Stand)
 
-## p <- ggplot(data=site.data, aes(x=Stand, y=ParasitismRate, fill=MeanBeeAbund)) +
-##     geom_bar(stat="identity") +
-##     labs(y="Proportion infected") +
-##      scale_color_viridis(option = "D")
+bee.screened  <- bee[bee$Stand %in% sites.screened,]
+bee.screened <- bee.screened[bee.screened$Year == "2019",]
 
-## # Horizontal bar plot
-## p + coord_flip()
-## ggsave(file="figures/bysite_beeAbund.pdf")
+bee.sum.screened <- bee.screened %>%
+    summarise(BeeRichness = length(unique(GenSp[!is.na(GenSp)])),
+              BeeDiversity =
+                  vegan::diversity(table(GenSp[!is.na(GenSp)]),
+                                   index="shannon"),
+              BeeAbund=sum(Count),
+              BeeGenera=length(unique(Genus[!is.na(Genus)])),)
 
 
-## f2 <- function(){
-##     layout(matrix(1:5, ncol=1))
-##     par(oma=c(2,2,1,2), mar=c(1,2,1,1),
-##         mgp=c(1.5,0.5,0))
 
-##     plot(log(MeanBloomAbund + 1) ~Age, data=standinfo, pch=16,
-##          ylab ="",
-##          xlab="", cex=1.2, cex.lab=1.2)
-##     mtext("Mean Flower Abundance (log)", 2, line=2)
+floral.screened  <- floral[floral$Stand %in% sites.screened,]
+floral.screened <- floral.screened[floral.screened$Year == "2019",]
 
-
-##     plot(FlowerDiversity~Age, data=standinfo, pch=16,
-##          ylab ="",
-##          xlab="", cex=1.2, cex.lab=1.2)
-##     mtext("Mean Flower Diversity", 2, line=2)
-
-##     plot(MeanBeeAbund ~Age, data=standinfo, pch=16,
-##          ylab ="",
-##          xlab="", cex=1.2, cex.lab=1.2)
-##     mtext("Mean Bee Abundance", 2, line=2)
-
-
-##     plot(MeanBeeRichness~Age, data=standinfo, pch=16,
-##          ylab ="",
-##          xlab="", cex=1.2, cex.lab=1.2)
-##     mtext("Mean Bee Richness", 2, line=2)
-
-##     plot(MeanBeeDiversity~Age, data=standinfo, pch=16,
-##          ylab ="",
-##          xlab="", cex=1.2, cex.lab=1.2)
-
-##     mtext("Mean Bee Diversity", 2, line=2)
-##     mtext("Years post harvest", 1, line=2)
-## }
-
-
-## pdf.f(f2, file="figures/yph.pdf",
-##       height=12, width=4)
-
-
-## *************************************************************
-##  map
-## *************************************************************
-
-## library(sp)
-## library(rgdal)
-
-## standinfo <- standinfo[standinfo$Age <= 9,]
-## table(standinfo$StandIntensity, standinfo$Age)
-
-## pts.standinfo <- standinfo
-## coordinates(pts.standinfo)=~CenterLon+CenterLat
-## proj4string(pts.standinfo)=CRS("+init=epsg:4326") # set it to lat-long
-
-## sites <- SpatialPointsDataFrame(coordinates(pts.standinfo),
-##                                    data=standinfo)
-
-## rgdal::writeOGR(sites, dsn="data/spatial", "sites",
-## driver="ESRI Shapefile")
-
-## *************************************************************
-##  plant lists
-## *************************************************************
-## floral <- merge(floral, standinfo)
-
-## floral$AgeCat <- "yph0-10"
-## ## floral$AgeCat[floral$Age > 3] <- "yph4-10"
-## floral$AgeCat[floral$Age > 10] <-  "yph11+"
-
-
-## ## by age
-## flowers.age <- table(floral$Flower_sci, floral$Age)
-
-## flowers.mean <-  floral %>%
-##   group_by(Flower_sci, Age) %>%
-##   summarise(FloralMeanAbund=mean(Blooms, na.rm=TRUE))
-
-## write.csv(flowers.age, file="data/floral.csv")
-## write.csv(flowers.mean, file="data/floralMeanAge.csv")
-
-## flowers <- read.csv(file="data/floral.csv")
-## colnames(flowers) <- c("PlantGenusSpecies", colnames(flowers)[-1])
-
-## flowers$sumSites <- apply(flowers[,-1], 1, sum)
-## write.csv(flowers, file="data/floral.csv", row.names=FALSE)
-
-## ## by age group
-
-## flowers.age.cat <-  floral %>%
-##   group_by(Flower_sci, AgeCat) %>%
-##   summarise(FloralMeanAbund=mean(Blooms, na.rm=TRUE))
-
-## write.csv(flowers.age.cat, file="data/floralMeanCatAge.csv",
-##           row.names=FALSE)
-
-## flowers.age.cat <- flowers.age.cat[flowers.age.cat$AgeCat == "yph0-10",]
-
-## ## *****
-
-## mixes <- read.csv("../beebettertimber/seeds/mixes.csv")
-## mixes$GenusSpecies <- fix.white.space(mixes$GenusSpecies)
-
-## id(mixes$GenusSpecies)
-
-## mixes$Genus <- sapply(strsplit(mixes$GenusSpecies, " "),
-##                       function(x)x[1])
-
-## flowers.age.cat$Genus <- sapply(strsplit(flowers.age.cat$Flower_sci, " "),
-##                       function(x)x[1])
-
-
-## matchMixes <- function(flower.data, flower.name.col, flower.mix.col,
-##                        mixes){
-##     flower.data <- data.frame(flower.data)
-##     tt <- mixes[, flower.mix.col][mixes$Mix == "Tough and tenacious"]
-##     dp <- mixes[, flower.mix.col][mixes$Mix == "Diverse prarie"]
-##     us <- mixes[, flower.mix.col][mixes$Mix == "Understory"]
-##     bp <- mixes[, flower.mix.col][mixes$Mix == "Burn pile"]
-##     dg <- mixes[, flower.mix.col][mixes$Mix == "Disturbed ground"]
-##     cm <- mixes[, flower.mix.col][mixes$Mix == "Custom"]
-##     cc <- mixes[, flower.mix.col][mixes$Mix == "Clearcut_herbicide"]
-##     ccn <- mixes[, flower.mix.col][mixes$Mix == "Clearcut_natural"]
-##     es <- mixes[, flower.mix.col][mixes$Mix == "Seral Ref"]
-##     usfs <- mixes[, flower.mix.col][mixes$Mix == "USFS"]
-
-##     flower.data$Tenacious <- 0
-##     flower.data$Tenacious[flower.data[, flower.name.col] %in% tt]  <- 1
-
-##     flower.data$DiversePrarie <- 0
-##     flower.data$DiversePrarie[flower.data[, flower.name.col] %in% dp]  <- 1
-
-##     flower.data$Understory <- 0
-##     flower.data$Understory[flower.data[, flower.name.col] %in% us]  <- 1
-
-##     flower.data$BurnPile <- 0
-##     flower.data$BurnPile[flower.data[, flower.name.col] %in% bp]  <- 1
-
-##     flower.data$Disturbed <- 0
-##     flower.data$Disturbed[flower.data[, flower.name.col] %in% dg] <- 1
-
-##     flower.data$Custom <- 0
-##     flower.data$Custom[flower.data[, flower.name.col] %in% cm] <- 1
-
-##     flower.data$EarlySeralRef <- 0
-##     flower.data$EarlySeralRef[flower.data[, flower.name.col] %in% es] <- 1
-
-##     flower.data$ClearcutHerbicide <- 0
-##     flower.data$ClearcutHerbicide[flower.data[, flower.name.col] %in% cc] <- 1
-
-##     flower.data$Clearcut21year <- 0
-##     flower.data$Clearcut21year[flower.data[, flower.name.col] %in%
-##                                ccn] <- 1
-
-##     flower.data$USFS <- 0
-##     flower.data$USFS[flower.data[, flower.name.col] %in% usfs] <- 1
-
-
-##     return(flower.data)
-## }
-
-
-## flowers.age.cat.sp <- matchMixes(flowers.age.cat, "Flower_sci",
-##                               "GenusSpecies", mixes)
-
-## write.csv(flowers.age.cat.sp, file="data/ClearCutFlowerMean.csv",
-##           row.names=FALSE)
-
-## ## by genus
-
-## flowers.age.cat.genus <- matchMixes(flowers.age.cat, "Genus", "Genus",
-##                                     mixes)
-
-## flowers.age.cat.genus$Flower_sci  <- NULL
-## flowers.age.cat.genus$FloralMeanAbund <- NULL
-
-## flowers.age.cat.genus <-
-##     flowers.age.cat.genus[!duplicated(flowers.age.cat.genus),]
-
-
-## write.csv(flowers.age.cat.genus, file="data/GenusClearCutFlowerMean.csv",
-##           row.names=FALSE)
-
-## ## *****
-
-## seral <- read.csv("../beebettertimber/seeds/earlySeral.csv")
-
-## seral$Group <- fix.white.space(seral$Group)
-## seral$GenusSpecies <- fix.white.space(seral$GenusSpecies)
-## seral$Family <- fix.white.space(seral$Family)
-
-## cats <- c("early seral herb",
-##           "late seral herb",
-##           "forest generalist shrub",
-##           "forest generalist herb",
-##           "unclassified herb",
-##           "unclassified shrub")
-
-## seral <- seral[seral$Group %in% cats,]
-## seral <- seral[seral$Family != "Poaceae",]
-
-## seral.mixes <- matchMixes(seral, "GenusSpecies",
-##                           "GenusSpecies", mixes)
-
-## write.csv(seral.mixes, file="data/SeralRefMixes.csv",
-##           row.names=FALSE)
-
-
-
+floral.sum.screened <- floral.screened%>%
+    summarise(FlowerRichness =
+                  length(unique(Flower_sci)),
+              FlowerDiversity=
+                  vegan:::diversity(table(Flower_sci),
+                                    index="shannon"),
+              BloomAbund=sum(Blooms, na.rm=TRUE))
