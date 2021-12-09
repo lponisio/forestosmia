@@ -1,6 +1,4 @@
-setwd('/Volumes/bombus/Dropbox (University of Oregon)/forestosmia')
-
-## setwd('~/Dropbox (University of Oregon)/forestosmia')
+## setwd('/Volumes/bombus/Dropbox (University of Oregon)/forestosmia')
 
 setwd("analyses")
 rm(list=ls())
@@ -31,8 +29,7 @@ repro.block <- repro.block[order(repro.block$Stand),]
 
 ## all of the variables that are explanatory variables and thus need
 ## to be centered
-vars <- c("TreeRichness",
-          "FlowerDiversity",
+vars <- c("FlowerDiversity",
           "MeanBloomAbund",
           "MeanBeeDiversity",
           "MeanBeeAbund",
