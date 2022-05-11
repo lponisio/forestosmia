@@ -52,7 +52,7 @@ repro.block <- makeDataMultiLevel(repro.block, "Stand")
 indiv.data <- makeDataMultiLevel(indiv.data, "Stand")
 
 indiv.data$Owner <- factor(indiv.data$Owner,
-                    levels= c("Hancock", "Starker", "ODF", "Weyco"))
+                    levels= c("Starker", "Hancock", "ODF", "Weyco"))
 
 
 ## create a dumby varaible "WeightPar" for the parasite data. The
@@ -80,7 +80,7 @@ formula.flower.div <- formula(FlowerDiversity | weights(Weights) ~
                               )
 ## flower abund
 formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
-                                    Owner +  Age  + Elev
+                                    Owner + Age  + Elev
                                 )
 
 ## **********************************************************
@@ -93,15 +93,11 @@ formula.bee.div <- formula(MeanBeeDiversity | weights(Weights)~
                                FlowerDiversity +
                                Age)
 
-                           )
-
 ## bee abund
 formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
                                  MeanBloomAbund +
                                  FlowerDiversity +
                                  Age)
-
-                             )
 
 ## **********************************************************
 ## Model 1.3: formula for bee community effects on parasitism
@@ -147,7 +143,7 @@ bform <- bf.fabund + bf.fdiv + bf.babund + bf.bdiv + bf.par +
 fit <- brm(bform, indiv.data,
            cores=ncores,
            iter = 10^4,
-           chains = 2,
+           chains = 3,
            thin=1,
            inits=0,
            control = list(adapt_delta = 0.99))

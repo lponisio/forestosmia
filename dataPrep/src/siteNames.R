@@ -1,5 +1,9 @@
 
 parasite$Stand <- as.character(parasite$Stand)
+
+parasite$Stand[parasite$Stand ==
+              "Bigrock"]  <- "Big Rock Creek"
+
 parasite$Stand[parasite$Stand ==
               "norton hill"]  <- "Norton Hill"
 parasite$Stand[parasite$Stand ==
@@ -29,7 +33,7 @@ parasite$Stand[parasite$Stand ==
 parasite$Stand[parasite$Stand ==
                  "miller creek"]  <- "Miller Creek"
 parasite$Stand[parasite$Stand ==
-                 "wild cab"]  <- "Wild Cab"
+                 "wild cab"]  <- "Wild Cabin"
 parasite$Stand[parasite$Stand ==
                  "gage"]  <- "Gage"
 parasite$Stand[parasite$Stand ==
@@ -61,13 +65,7 @@ parasite$Stand[parasite$Stand ==
 parasite$Stand[parasite$Stand ==
                  "Cougar ridge"]  <- "Cougar Ridge"
 parasite$Stand[parasite$Stand ==
-                 "Bigrock"]  <- "Big Rock Creek"
-parasite$Stand[parasite$Stand ==
-                 "Buttermilk"]  <- "Buttermilk Creek"
-parasite$Stand[parasite$Stand ==
-                 "Broken horn"]  <- "Broken Horn"
-parasite$Stand[parasite$Stand ==
-                 "Wolf cab"]  <- "Wolf Cabin"
+  "Wolf cab"]  <- "Wolf Cabin"
 parasite$Stand[parasite$Stand ==
                  "wolf cab"]  <- "Wolf Cabin"
 parasite$Stand[parasite$Stand ==
@@ -82,16 +80,16 @@ parasite$Stand[parasite$Stand ==
                  "Gage "]  <- "Gage"
 
 
-vegcover$Stand <- as.character(vegcover$Stand)
-vegcover$Stand[vegcover$Stand ==
-                 "Alexander Rd."]  <- "Alexander Rd"
-vegcover$Stand[vegcover$Stand ==
-                 "luckiamate"]  <- "Luckiamute"
-vegcover$Stand[vegcover$Stand ==
-                 "Luckiamate"]  <- "Luckiamute"
-vegcover$Stand[vegcover$Stand ==
-                 "Lake lyons"]  <- "Lake Lyons"
-vegcover$Stand[vegcover$Stand ==
-                 "Hull Oaks"]  <- "Hull Oakes"
-vegcover$Stand[vegcover$Stand ==
-                 "Walker camp"]  <- "Walker Camp"
+## vegcover$Stand <- as.character(vegcover$Stand)
+## vegcover$Stand[vegcover$Stand ==
+##                  "Alexander Rd."]  <- "Alexander Rd"
+## vegcover$Stand[vegcover$Stand ==
+##                  "luckiamate"]  <- "Luckiamute"
+## vegcover$Stand[vegcover$Stand ==
+##                  "Luckiamate"]  <- "Luckiamute"
+## vegcover$Stand[vegcover$Stand ==
+##                  "Lake lyons"]  <- "Lake Lyons"
+## vegcover$Stand[vegcover$Stand ==
+##                  "Hull Oaks"]  <- "Hull Oakes"
+## vegcover$Stand[vegcover$Stand ==
+##                  "Walker camp"]  <- "Walker Camp"
