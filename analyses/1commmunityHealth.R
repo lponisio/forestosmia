@@ -1,22 +1,27 @@
 setwd('/Volumes/bombus/Dropbox (University of Oregon)/forestosmia')
 
+## Prepares the data for model fitting (standardizes continuous
+## variables, creates dummy variables to be used as weights to all
+## different subsets of data to be used in different model levels),
+## builds the models, and fits the models in brms. The model outputs
+## are saved as tables, and chain diagnostic plots created. For the
+## models for Osmia reproduction, missing parasite prevalence rate
+## data is imputed before model fitting.
+
 setwd("analyses")
 rm(list=ls())
-library(brms)
-library(bayesplot)
-library(tidybayes)
-library(mice)
-library(ggplot2)
 
+source("src/init.R")
 load("../data/indivdata.Rdata")
-load("../data/sitedata.Rdata")
 load("../data/reproblock.Rdata")
 
 source("src/writeResultsTable.R")
 source("src/makeMultiLevelData.R")
 source("src/misc.R")
 
-ncores <- 10
+
+## set to the number of cores you would like the models to run on
+ncores <- 2
 
 ## **********************************************************
 ## formula for site effects on the bee community
@@ -38,17 +43,15 @@ vars <- c("FlowerDiversity",
           "Elev")
 
 indiv.data$Age <- log(indiv.data$Age +1)
-site.data$Age <- log(site.data$Age + 1)
 repro.block$Age <- log(repro.block$Age + 1)
 
 ##  center all of the x variables across the datasets
-site.data[, vars] <- apply(site.data[, vars], 2, standardize)
 indiv.data[, vars] <- apply(indiv.data[, vars], 2, standardize)
 repro.block[, vars] <- apply(repro.block[, vars], 2, standardize)
 
 ## repro.block$ParasitismRate <- standardize(repro.block$ParasitismRate)
 
-## create a dumby varaible "Weight" to deal with the data sets being at
+## create a dummy varaible "Weight" to deal with the data sets being at
 ## different levels to get around the issue of having to pass in one
 ## data set into brms
 
@@ -59,7 +62,7 @@ indiv.data$Owner <- factor(indiv.data$Owner,
                            levels= c("OwnerA", "OwnerB", "OwnerC", "ODF"))
 
 
-## create a dumby varaible "WeightPar" for the parasite data. The
+## create a dummy varaible "WeightPar" for the parasite data. The
 ## original intention was to keep stan from dropping data for
 ## site-level models, but weight is 0 for parasite models.
 
@@ -99,7 +102,7 @@ formula.bee.div <- formula(MeanBeeDiversity | weights(Weights)~
 formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
                                  MeanBloomAbund +
                                      FlowerDiversity +
-                                     Age + Acres )
+                                     Age + Acres  )
 
 ## **********************************************************
 ## Model 1.3: formula for bee community effects on parasitism
@@ -139,103 +142,87 @@ bf.par <- bf(formula.parasite, family="bernoulli")
 bform <- bf.fabund + bf.fdiv + bf.babund + bf.bdiv + bf.par +
     set_rescor(FALSE)
 
-## ## run model
-## fit <- brm(bform, indiv.data,
-##            cores=ncores,
-##            iter = 10^4,
-##            chains =1,
-##            thin=1,
-##            inits=0,
-##            control = list(adapt_delta = 0.99))
+## run model
+fit <- brm(bform, indiv.data,
+           cores=ncores,
+           iter = 10^4,
+           chains =1,
+           thin=1,
+           inits=0,
+           control = list(adapt_delta = 0.99))
 
-## write.ms.table(fit, "parasitism")
-## save(fit, site.data, indiv.data,
-##      file="saved/parasiteFitMod.Rdata")
+write.ms.table(fit, "parasitism")
+save(fit, indiv.data,
+     file="saved/parasiteFitMod.Rdata")
 
-## ## dignostic figures
-## mcmc_trace(fit)
-## ggsave("figures/diagnostics/parasite.pdf",
-##        height=11, width=8.5)
+## dignostic figures
+mcmc_trace(fit)
+ggsave("figures/diagnostics/parasite.pdf",
+       height=11, width=8.5)
 
 ## ************************************************************
 ## Model 2.1 formulas for the site effects on nest reproduction
 ## ************************************************************
 
-## can use total offspring or total female offspring as the response
-## variable
+## ## can use total offspring or total female offspring as the response
+## ## variable
 
-imp.dat.pre <- mice(repro.block, m = 2,
-                    print = FALSE)
+## imp.dat.pre <- mice(repro.block, m = 2,
+##                     print = FALSE)
 
-pred <- imp.dat.pre$pred
-pred[, c("Weights", "Block", "SiteIDs", "Year")] <- 0
-pred[, c("Stand", "Owner")] <- 1
+## pred <- imp.dat.pre$pred
+## pred[, c("Weights", "Block", "SiteIDs", "Year")] <- 0
+## pred[, c("Stand", "Owner")] <- 1
 
-meth <- imp.dat.pre$meth
-meth[c(2)] <- "rf"
+## meth <- imp.dat.pre$meth
+## meth[c(2)] <- "rf"
 
-imp.dat <- mice(repro.block, m = 100, predictorMatrix=pred,
-                method=meth,
-                print = FALSE)
-
-
-densityplot(imp.dat)
-plot(imp.dat, c("ParasitismRate"))
-
-ys <- c("SumOffspring")
-
-xvar.NestRepro <- c("scale(ParasitismRate)",
-    "MeanBloomAbund",
-    "FlowerDiversity",
-    "MeanBeeAbund",
-    "MeanHBAbund")
-
-formulas.NestRepro <-lapply(ys, function(x) {
-  as.formula(paste(x, "~",
-                   paste(paste(xvar.NestRepro, collapse="+"),
-                         "(1|Stand)",
-                         sep="+")))
-})
-
-bf.offspring <- bf(formulas.NestRepro[[1]], family="negbinomial")
-
-## full model
-bform2 <-    bf.par.site +
-    bf.offspring +
-    set_rescor(FALSE)
+## imp.dat <- mice(repro.block, m = 100, predictorMatrix=pred,
+##                 method=meth,
+##                 print = FALSE)
 
 
-## bform2 <-   bf.offspring
+## densityplot(imp.dat)
+## plot(imp.dat, c("ParasitismRate"))
 
+## ys <- c("SumOffspring")
+
+## xvar.NestRepro <- c("scale(ParasitismRate)",
+##     "MeanBloomAbund",
+##     "FlowerDiversity",
+##     "MeanBeeAbund",
+##     "MeanHBAbund")
+
+## formulas.NestRepro <-lapply(ys, function(x) {
+##   as.formula(paste(x, "~",
+##                    paste(paste(xvar.NestRepro, collapse="+"),
+##                          "(1|Stand)",
+##                          sep="+")))
+## })
+
+## bf.offspring <- bf(formulas.NestRepro[[1]], family="negbinomial")
+
+## ## full model
+## bform2 <-    bf.par.site +
+##     bf.offspring +
+##     set_rescor(FALSE)
 
 ## ## run model
-## fit2 <- brm(bform2, data=repro.block,
-##             cores=ncores,
-##             iter = 10^5,
-##             chains = 1,
-##             inits=0,
-##             thin=1,
-##             control = list(adapt_delta = 0.99,
-##                            max_treedepth = 15))
+## fit2 <- brm_multiple(bform2, data=imp.dat,
+##            cores=ncores,
+##            iter = 10^4,
+##            chains = 1,
+##            inits=0,
+##            thin=1,
+##            control = list(adapt_delta = 0.99,
+##                           max_treedepth = 15))
 
+## write.ms.table(fit2, "offspring")
 
+## save(fit2, repro.block,
+##      file="saved/offspringFitMod.Rdata")
 
-## run model
-fit2 <- brm_multiple(bform2, data=imp.dat,
-           cores=ncores,
-           iter = 10^4,
-           chains = 1,
-           inits=0,
-           thin=1,
-           control = list(adapt_delta = 0.99,
-                          max_treedepth = 15))
-
-write.ms.table(fit2, "offspring")
-
-save(fit2, repro.block,
-     file="saved/offspringFitMod.Rdata")
-
-## diagnostic plots
-mcmc_trace(fit2)
-ggsave("figures/diagnostics/offspring.pdf",
-       height=11, width=8.5)
+## ## diagnostic plots
+## mcmc_trace(fit2)
+## ggsave("figures/diagnostics/offspring.pdf",
+##        height=11, width=8.5)

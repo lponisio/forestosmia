@@ -1,17 +1,11 @@
 setwd('/Volumes/bombus/Dropbox (University of Oregon)/forestosmia')
+
+## Script for plotting all of the important explanatory variables.
+
 setwd("analyses")
 rm(list=ls())
-library(ggplot2)
-library(tidyr)
-library(viridis)
-library(brms)
-library(bayesplot)
-library(tidybayes)
-library(dplyr)
-library(gridExtra)
-library(grid)
-library(scales)
-source("src/makeMultiLevelData.R")
+
+source("src/init.R")
 source("src/misc.R")
 
 load("../data/indivdata.Rdata")
@@ -24,15 +18,10 @@ load(file="saved/parasiteFitMod.Rdata")
 ## plotting, unscaling labs
 ## ***********************************************************************
 
-## indiv.data.orig <- indiv.data.orig[!is.na(indiv.data.orig$AnyParasite),]
-
 indiv.data.orig$Age <- log(indiv.data.orig$Age + 1)
 
 labs.age.x <- (pretty(c(indiv.data.orig$Age),
                       n=10))
-
-## labs.age.x <- (pretty(log(indiv.data.orig$Age +1),
-##                       n=6))
 
 axis.age.x <-  standardize.axis(labs.age.x, indiv.data.orig$Age)
 
@@ -40,6 +29,10 @@ axis.age.x <-  standardize.axis(labs.age.x, indiv.data.orig$Age)
 labs.bloom.abund <- (pretty(c(0, indiv.data.orig$MeanBloomAbund), n=6))
 axis.bloom.abund <-  standardize.axis(labs.bloom.abund,
                                       indiv.data.orig$MeanBloomAbund)
+
+labs.acres <- (pretty(c(0, indiv.data.orig$Acres), n=6))
+axis.acres <-  standardize.axis(labs.acres,
+                                indiv.data.orig$Acres)
 
 
 labs.bee.abund2 <- (pretty(c(0,
@@ -63,11 +56,10 @@ axis.bee.div <-  standardize.axis(labs.bee.div,
                                   indiv.data.orig$MeanBeeDiversity)
 
 ## ***********************************************************************
-## company
+## Landowner
 ## ***********************************************************************
-
 ## not that useful of a figure because there "age" is not accounted
-## for
+## for, but a little useful
 
 p1.owner <- ggplot(indiv.data[indiv.data$Weights==1,],
                    aes(x=Owner, y=FlowerDiversity)) +
@@ -310,16 +302,16 @@ ggsave(offspring, file="figures/offspring.pdf",
 ## ***********************************************************************
 
 p1.bee <- fit %>%
-    spread_draws(b_MeanBeeAbund_Intercept, b_FlowerDiversity_Intercept,
-                 b_MeanBeeAbund_FlowerDiversity) %>%
-    mutate(FlowerDiversity =
-               list(seq(min(indiv.data$FlowerDiversity),
-                        max(indiv.data$FlowerDiversity),
+    spread_draws(b_MeanBeeAbund_Intercept,
+                 b_MeanBeeAbund_Acres) %>%
+    mutate(Acres =
+               list(seq(min(indiv.data$Acres),
+                        max(indiv.data$Acres),
                         0.01))) %>%
-    unnest(FlowerDiversity) %>%
-    mutate(pred = b_MeanBeeAbund_Intercept + b_FlowerDiversity_Intercept +
-               b_MeanBeeAbund_FlowerDiversity*FlowerDiversity) %>%
-    group_by(FlowerDiversity) %>%
+    unnest(Acres) %>%
+    mutate(pred = b_MeanBeeAbund_Intercept +
+               b_MeanBeeAbund_Acres*Acres) %>%
+    group_by(Acres) %>%
     summarise(pred_m = mean(pred, na.rm = TRUE),
               pred_low_95 = quantile(pred, prob = 0.025),
               pred_high_95 = quantile(pred, prob = 0.975),
@@ -327,7 +319,7 @@ p1.bee <- fit %>%
               pred_high_90 = quantile(pred, prob = 0.95),
               pred_low_85 = quantile(pred, prob = 0.075),
               pred_high_85 = quantile(pred, prob = 0.925)) %>%
-    ggplot(aes(x = FlowerDiversity, y = pred_m)) +
+    ggplot(aes(x = Acres, y = pred_m)) +
     geom_line() +
     geom_ribbon(aes(ymin = pred_low_95, ymax = pred_high_95), alpha=0.2,
                 fill="goldenrod") +
@@ -336,10 +328,10 @@ p1.bee <- fit %>%
     geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
                 fill="dodgerblue") +
     ylab("Bee abundance") +
-    xlab("") +
+    xlab("Stand acres") +
     scale_x_continuous(
-        breaks = axis.flower.div,
-        labels =  labs.flower.div) +
+        breaks = axis.acres,
+        labels =  labs.acres) +
     scale_y_continuous(
         breaks = axis.bee.abund,
         labels =  labs.bee.abund ) +
@@ -351,7 +343,7 @@ p1.bee <- fit %>%
                                !is.na(indiv.data$AnyParasite) &
                                indiv.data$MeanBeeAbund !=
                                max(indiv.data$MeanBeeAbund),],
-               aes(y=MeanBeeAbund, x=FlowerDiversity))
+               aes(y=MeanBeeAbund, x=Acres))
 
 p2.bee <- fit %>%
     spread_draws(b_MeanBeeDiversity_Intercept, b_FlowerDiversity_Intercept,
