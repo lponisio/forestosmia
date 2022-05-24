@@ -23,7 +23,13 @@ parasite$Stand[parasite$Stand ==
 parasite$Stand[parasite$Stand ==
                  "Luckiamate"]  <- "Luckiamute"
 parasite$Stand[parasite$Stand ==
-                 "broken horn"]  <- "Broken Horn"
+               "broken horn"]  <- "Broken Horn"
+parasite$Stand[parasite$Stand ==
+               "Broken horn"]  <- "Broken Horn"
+
+parasite$Stand[parasite$Stand ==
+                 "Buttermilk"]  <- "Buttermilk Creek"
+
 parasite$Stand[parasite$Stand ==
                  "black rock"]  <- "Black Rock"
 parasite$Stand[parasite$Stand ==
