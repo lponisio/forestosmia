@@ -1,13 +1,12 @@
-## setwd('/Volumes/bombus/Dropbox (University of Oregon)/forestosmia')
+setwd('/Volumes/bombus/Dropbox (University of Oregon)/forestosmia')
 
 setwd("analyses")
 rm(list=ls())
-library(ggplot2)
-library(viridis)
 library(brms)
 library(bayesplot)
 library(tidybayes)
-library(tidyverse)
+library(mice)
+library(ggplot2)
 
 load("../data/indivdata.Rdata")
 load("../data/sitedata.Rdata")
@@ -33,26 +32,31 @@ vars <- c("FlowerDiversity",
           "MeanBloomAbund",
           "MeanBeeDiversity",
           "MeanBeeAbund",
+          "MeanHBAbund",
           "Age",
+          "Acres",
           "Elev")
+
+indiv.data$Age <- log(indiv.data$Age +1)
+site.data$Age <- log(site.data$Age + 1)
+repro.block$Age <- log(repro.block$Age + 1)
 
 ##  center all of the x variables across the datasets
 site.data[, vars] <- apply(site.data[, vars], 2, standardize)
 indiv.data[, vars] <- apply(indiv.data[, vars], 2, standardize)
 repro.block[, vars] <- apply(repro.block[, vars], 2, standardize)
 
-## standardize paristism rate, take the log first to help with skew
-repro.block$ParasitismRate <- standardize(log(repro.block$ParasitismRate))
+## repro.block$ParasitismRate <- standardize(repro.block$ParasitismRate)
 
 ## create a dumby varaible "Weight" to deal with the data sets being at
 ## different levels to get around the issue of having to pass in one
 ## data set into brms
 
-repro.block <- makeDataMultiLevel(repro.block, "Stand")
 indiv.data <- makeDataMultiLevel(indiv.data, "Stand")
+repro.block <- makeDataMultiLevel(repro.block, "Stand")
 
 indiv.data$Owner <- factor(indiv.data$Owner,
-                    levels= c("Starker", "Hancock", "ODF", "Weyco"))
+                           levels= c("OwnerA", "OwnerB", "OwnerC", "ODF"))
 
 
 ## create a dumby varaible "WeightPar" for the parasite data. The
@@ -64,10 +68,8 @@ indiv.data$WeightsPar[is.na(indiv.data$AnyParasite)] <- 0
 
 ## stan drops all NA data, so can set AnyParasite to 0 with WeightsPar
 ## to keep it in the models, this is commented out because we don't
-## want to use the entire dataset in this publication
 
-## indiv.data$AnyParasite[is.na(indiv.data$AnyParasite)] <- 0
-
+indiv.data$AnyParasite[is.na(indiv.data$AnyParasite)] <- 0
 
 ## **********************************************************
 ## Model 1.1: formula for forest effects on floral community
@@ -76,11 +78,11 @@ indiv.data$WeightsPar[is.na(indiv.data$AnyParasite)] <- 0
 
 ## flower diversity
 formula.flower.div <- formula(FlowerDiversity | weights(Weights) ~
-                                  Owner + Age + Elev
+                              + Age + Elev + Owner
                               )
 ## flower abund
 formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
-                                    Owner + Age  + Elev
+                                        Age  + Elev + Owner
                                 )
 
 ## **********************************************************
@@ -90,14 +92,14 @@ formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
 ## bee diversity
 formula.bee.div <- formula(MeanBeeDiversity | weights(Weights)~
                                MeanBloomAbund +
-                               FlowerDiversity +
-                               Age)
+                                   FlowerDiversity +
+                                   Age)
 
 ## bee abund
 formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
                                  MeanBloomAbund +
-                                 FlowerDiversity +
-                                 Age)
+                                     FlowerDiversity +
+                                     Age + Acres )
 
 ## **********************************************************
 ## Model 1.3: formula for bee community effects on parasitism
@@ -105,25 +107,23 @@ formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
 
 formula.parasite <- formula(AnyParasite | weights(WeightsPar) ~
                                 MeanBeeAbund +
-                                FlowerDiversity +
-                                MeanBeeDiversity +
-                                MeanBloomAbund +
-                                (1|Stand)
+                                    FlowerDiversity +
+                                    MeanBeeDiversity +
+                                    MeanBloomAbund +
+                                    MeanHBAbund +
+                                    (1|Stand)
                             )
 
-formula.parasite.site <- formula(ParasitismRate | weights(Weights) ~
+formula.parasite.site <- formula(scale(ParasitismRate) | weights(Weights) ~
                                      MeanBeeAbund +
                                      MeanBeeDiversity +
                                      MeanBloomAbund +
-                                     (FlowerDiversity)
+                                     FlowerDiversity +
+                                     MeanHBAbund
                                  )
 
-
-## **********************************************************
-## Community models
-## **********************************************************
 ## convert to brms format
-
+bf.par.site <- bf(formula.parasite.site)
 bf.fabund <- bf(formula.flower.abund)
 bf.fdiv <- bf(formula.flower.div)
 bf.babund <- bf(formula.bee.abund)
@@ -139,24 +139,23 @@ bf.par <- bf(formula.parasite, family="bernoulli")
 bform <- bf.fabund + bf.fdiv + bf.babund + bf.bdiv + bf.par +
     set_rescor(FALSE)
 
-## run model
-fit <- brm(bform, indiv.data,
-           cores=ncores,
-           iter = 10^4,
-           chains = 3,
-           thin=1,
-           inits=0,
-           control = list(adapt_delta = 0.99))
+## ## run model
+## fit <- brm(bform, indiv.data,
+##            cores=ncores,
+##            iter = 10^4,
+##            chains =1,
+##            thin=1,
+##            inits=0,
+##            control = list(adapt_delta = 0.99))
 
-write.ms.table(fit, "parasitism_interaction")
+## write.ms.table(fit, "parasitism")
+## save(fit, site.data, indiv.data,
+##      file="saved/parasiteFitMod.Rdata")
 
-save(fit, site.data, indiv.data,
-     file="saved/parasiteFitMod.Rdata")
-
-## dignostic figures
-mcmc_trace(fit)
-ggsave("figures/diagnostics/parasite.pdf",
-       height=11, width=8.5)
+## ## dignostic figures
+## mcmc_trace(fit)
+## ggsave("figures/diagnostics/parasite.pdf",
+##        height=11, width=8.5)
 
 ## ************************************************************
 ## Model 2.1 formulas for the site effects on nest reproduction
@@ -165,15 +164,31 @@ ggsave("figures/diagnostics/parasite.pdf",
 ## can use total offspring or total female offspring as the response
 ## variable
 
-ys <- c("SumOffspring",
-        "Females")
+imp.dat.pre <- mice(repro.block, m = 2,
+                    print = FALSE)
 
-bf.par.site <- bf(formula.parasite.site)
+pred <- imp.dat.pre$pred
+pred[, c("Weights", "Block", "SiteIDs", "Year")] <- 0
+pred[, c("Stand", "Owner")] <- 1
 
-xvar.NestRepro <- c("ParasitismRate",
-                   "(MeanBloomAbund)",
-                    "(FlowerDiversity)",
-                    "(MeanBeeAbund)")
+meth <- imp.dat.pre$meth
+meth[c(2)] <- "rf"
+
+imp.dat <- mice(repro.block, m = 100, predictorMatrix=pred,
+                method=meth,
+                print = FALSE)
+
+
+densityplot(imp.dat)
+plot(imp.dat, c("ParasitismRate"))
+
+ys <- c("SumOffspring")
+
+xvar.NestRepro <- c("scale(ParasitismRate)",
+    "MeanBloomAbund",
+    "FlowerDiversity",
+    "MeanBeeAbund",
+    "MeanHBAbund")
 
 formulas.NestRepro <-lapply(ys, function(x) {
   as.formula(paste(x, "~",
@@ -182,21 +197,36 @@ formulas.NestRepro <-lapply(ys, function(x) {
                          sep="+")))
 })
 
-bf.offspring <- bf(formulas.NestRepro[[1]], family="poisson")
+bf.offspring <- bf(formulas.NestRepro[[1]], family="negbinomial")
 
 ## full model
-bform2 <-   bf.par.site +
+bform2 <-    bf.par.site +
     bf.offspring +
     set_rescor(FALSE)
 
 
+## bform2 <-   bf.offspring
+
+
+## ## run model
+## fit2 <- brm(bform2, data=repro.block,
+##             cores=ncores,
+##             iter = 10^5,
+##             chains = 1,
+##             inits=0,
+##             thin=1,
+##             control = list(adapt_delta = 0.99,
+##                            max_treedepth = 15))
+
+
+
 ## run model
-fit2 <- brm(bform2, repro.block,
+fit2 <- brm_multiple(bform2, data=imp.dat,
            cores=ncores,
            iter = 10^4,
-           chains = 4,
+           chains = 1,
            inits=0,
-           thin=2,
+           thin=1,
            control = list(adapt_delta = 0.99,
                           max_treedepth = 15))
 
