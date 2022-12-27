@@ -4,33 +4,51 @@ library(lubridate)
 library(Taxonstand)
 ## prepares raw data and creates dataset for analyses
 
-setwd('/Volumes/bombus/Dropbox (University of Oregon)/')
+## setwd('/Volumes/bombus/Dropbox (University of Oregon)/')
+## setwd('~/Dropbox (University of Oregon)/')
 
 setwd("forestosmia_saved")
 
 parasite <- read.csv("data/parasite.csv",
                      stringsAsFactors=FALSE)
-floral <- read.csv("data/floral2.csv", stringsAsFactors=FALSE)
+floral2 <- read.csv("data/FPH_FloralData_AllRounds.csv",
+                   stringsAsFactors=FALSE)
 repro <- read.csv("data/reproductive.csv",
                   stringsAsFactors=FALSE)
-stand.info <- read.csv("data/standinfo_anon.csv",
-                      stringsAsFactors=FALSE)
-insect <- read.csv("data/insect-all.csv",
+stand.info <- read.csv("data/standinfo_Nov9_2022.csv",
+                       stringsAsFactors=FALSE)
+insect2 <- read.csv("data/AllSpecimens_2018_2019_11062022.csv",
                    stringsAsFactors=FALSE)
 source("../forestosmia/dataPrep/src/siteNames.R")
 source("../forestosmia/dataPrep/src/misc.R")
 
 dir <- "cleaneddata"
 
-
 ## ## ***********************************************************
 ## ## prep for merging stand data with multiple years
 ## ## ***********************************************************
+floral.stands <- unique(floral2$Stand[floral2$Year == 2019])
+insect.stands <- unique(insect2$Stand[insect2$Year == 2019])
 
-stand.info$Year  <- 2019
+## check that all stands in the 2019 insect data are in the floral,
+## and vice versa
+insect.stands[!insect.stands %in% floral.stands]
+floral.stands[!floral.stands %in% insect.stands]
 
 
-## stand.info$StandYear <- paste(stand.info$Stand, stand.info$Year)
+## check to see that all stands in stand info are in the insect data
+stand.info$Stand[!stand.info$Stand %in% insect.stands]
+stand.info$Stand[stand.info$Stand == "Alexander Rd"]  <- "Alexander Rd."
+
+stand.info$Stand[!stand.info$Stand %in% insect.stands]
+
+stand.info$Year <- 2018
+stand.info$Year[stand.info$Stand %in% floral.stands]  <- 2019
+
+sum(stand.info$Year == 2018)
+
+## drop the 2018 only stands, which is only one stand Honeygrove
+stand.info <- stand.info[stand.info$Year == 2019,]
 
 ## ***********************************************************
 ## parasite data
@@ -44,7 +62,6 @@ parasite$Date <- as.Date(parasite$Date, "%m/%d/%y")
 parasite$Year <- format(parasite$Date, "%Y")
 
 parasite$Year[is.na(parasite$Year)] <- 2019
-
 
 ## drop all the no template controls under UniqueID because they were
 ## all neg for parasites
@@ -122,50 +139,89 @@ pdf.f(f.hist, file="figures/parasitism.pdf", height=12, width=4)
 ## we want abundance flowers (abundflw), richness flowering species
 ## (richnessflwingsp), and abundfloweringsp
 
-floral$Vials <- NULL
-floral$Other_flowers <- NULL
-floral$Notes <- NULL
+cleanFloral <- function(floral){
 
-## Floral Richness
-## we don't want zeroes counted as 1 though
+    floral$Other_flowers <- NULL
+    floral$Notes <- NULL
+    floral$Flower_common <- NULL
 
-floral$Flower_sci[floral$Flower_sci == 0] <- NA
-floral$Flower_sci <- fix.white.space(floral$Flower_sci)
-id(floral$Flower_sci)
+    ## Floral Richness
+    ## we don't want zeroes counted as 1 though
 
-floral$Flower_sci <- as.character(floral$Flower_sci)
+    floral$Flower_sci[floral$Flower_sci == 0] <- "No flowers"
+    floral$Flower_sci <- fix.white.space(floral$Flower_sci)
 
-## clean up names
-floral$Flower_sci[floral$Flower_sci == "Claytonia perfoliata"]  <-
-    "Claytonia parviflora"
-floral$Flower_sci[floral$Flower_sci == "Lupinus rivularis "]  <-
-    "Lupinus rivularis"
-floral$Flower_sci[floral$Flower_sci == "Unknown forb"]  <- NA
-floral <- floral[!floral$Flower_sci == "NA",]
-id(floral$Flower_sci)
+    floral$Flower_sci <- as.character(floral$Flower_sci)
 
-## checked.plant.names <- TPL(id(floral$Flower_sci))
+    ## clean up names
+    floral$Flower_sci[floral$Flower_sci == "Claytonia perfoliata"]  <-
+        "Claytonia parviflora"
+    floral$Flower_sci[floral$Flower_sci == "Lupinus rivularis "]  <-
+        "Lupinus rivularis"
+    floral$Flower_sci[floral$Flower_sci == "Unknown forb"]  <- NA
+    floral$Flower_sci[floral$Flower_sci == "Iris sp."]  <-
+        "Iris tenax"
+    floral$Flower_sci[floral$Flower_sci == "Corylus sp."]  <- "Corylus cornuta"
+    floral <- floral[!floral$Flower_sci == "NA",]
+    print(id(floral$Flower_sci))
 
-## floral$Family  <- NA
-## floral$Family <- checked.plant.names$Family[match(floral$Flower_sci,
-##                                                   checked.plant.names$Taxon)]
 
-floral$Date <- as.Date(floral$Date, "%m/%d/%y")
-floral$Year <- format(floral$Date, "%Y")
+    print(paste("number of duplicated rows to drop", sum(duplicated(floral))))
+
+    ## remove duplicates?
+
+    floral <- floral[!duplicated(floral),]
+
+    ## checked.plant.names <- TPL(id(floral$Flower_sci))
+    ## write.csv(checked.plant.names, file="checkedPlants.csv")
+
+    ## floral$Family  <- NA
+    ## floral$Family <- checked.plant.names$Family[match(floral$Flower_sci,
+    ##                                                   checked.plant.names$Taxon)]
+
+    floral$Date <- as.Date(floral$Date, "%m/%d/%y")
+    floral$Year <- format(floral$Date, "%Y")
+
+    floral <- floral[!is.na(floral$Stand),]
+    return(floral)
+}
+
+
+floral <- cleanFloral(floral2)
+nrow(floral)
+
+## drop round 4 which does not overlap when Osmia where flying
+floral <- floral[floral$Round != 4,]
+nrow(floral)
+
+## only use 2019 data
+floral <- floral[floral$Year == 2019,]
+
+floral.check <- floral %>%
+    group_by(Stand,  Year, Round) %>%
+    summarise(length(unique(Transect)))
+
+write.csv(floral.check, file = "floral_samples.csv",
+          row.names=FALSE)
 
 ## all unIDed plants removed
 
+## calculate richness and diversity for each transect, dropping the
+## "no flowers" rows
 floral.sum <- floral %>%
-    group_by(Stand, Transect, Year) %>%
+    group_by(Stand, Transect, Year, Round) %>%
     summarise(FlowerRichness =
-                  length(unique(Flower_sci)),
+                  length(unique(Flower_sci[Flower_sci != "No flowers"])),
               FlowerDiversity=
-                  vegan:::diversity(table(Flower_sci),
+                  vegan:::diversity(table(Flower_sci[Flower_sci !=
+                                                     "No flowers"]),
                                     index="shannon"),
               BloomAbund=sum(Blooms, na.rm=TRUE),
               StemAbund=sum(Stems, na.rm=TRUE),
               CanopyCover=mean(Canopy_cent,  na.rm=TRUE))
 
+## take the mean across the year, since that would be have the average
+## conditions the osmia were exposed to
 mean.floral <- floral.sum %>%
     group_by(Stand, Year) %>%
     summarise(FlowerRichness = mean(FlowerRichness, na.rm=TRUE),
@@ -176,9 +232,17 @@ mean.floral <- floral.sum %>%
 
 stand.info <- merge(stand.info, mean.floral, all.x=TRUE)
 
-stand.info$MeanBloomAbund[is.na(stand.info$MeanBloomAbund)] <- 0
-stand.info$FlowerRichness[is.na(stand.info$FlowerRichness)] <- 0
-stand.info$FlowerDiversity[is.na(stand.info$FlowerDiversity)] <- 0
+only.na <- stand.info$Stand[is.na(stand.info$MeanBloomAbund)]
+
+## check stands with with NA for site summaries
+floral[floral$Stand %in% only.na,]
+
+## all should be zero because no flowers ever found. No longer
+## necessary as of Dec 8 2022 because all stands have values
+
+## stand.info$MeanBloomAbund[is.na(stand.info$MeanBloomAbund)] <- 0
+## stand.info$FlowerRichness[is.na(stand.info$FlowerRichness)] <- 0
+## stand.info$FlowerDiversity[is.na(stand.info$FlowerDiversity)] <- 0
 
 
 f.hist <- function(){
@@ -188,128 +252,151 @@ f.hist <- function(){
     hist(stand.info$FlowerDiversity, main= "Flower diversity", xlab="")
 
 }
-pdf.f(f.hist, file="figures/floral.pdf",
+pdf.f(f.hist, file="figures/floral_new_data.pdf",
       height=8, width=4)
 
+checkMax <- function(floral){
+
+    ## investigate stand with ~max blooms
+    etreme.stand <- stand.info[stand.info$MeanBloomAbund ==
+                           max(stand.info$MeanBloomAbund),]
+    ## given by lots and lots of foxglove
+    print("Stand with max blooms")
+    floral[floral$Stand == unique(etreme.stand$Stand),]
+}
+
+checkMax(floral)
 
 ## ***********************************************************
 ## BEE DIVERSITY DATA, MERGE
 ## ***********************************************************
 
-insect$Caste <- NULL
-bee.fams <- c("Halictidae", "Apidae", "Colletidae", "Megachilidae",
-              "Andrenidae")
-bee <- insect[insect$Family %in% bee.fams,]
+cleanBees <- function(insect){
+    insect$Caste <- NULL
+    insect$Notes <- NULL
+    bee.fams <- c("Halictidae", "Apidae", "Colletidae", "Megachilidae",
+                  "Andrenidae")
+    bee <- insect[insect$Family %in% bee.fams,]
+    print(id(bee$Genus))
 
-id(bee$Genus)
-## bee <- bee[!is.na(bee$Genus),]
-## bee <- bee[bee$Genus != "0",]
+    bee$GenusSpecies <- fix.white.space(paste(bee$Genus, bee$Species))
+    bee$GenusSpecies[bee$GenusSpecies=="NA NA"] <- NA
+    bee$GenusSpecies[grep("damaged", bee$GenusSpecies)] <- NA
 
-bee$GenSp[bee$GenSp=="0 0"] <- NA
-bee$GenSp[bee$GenSp=="NA NA"] <- NA
+    ## print(id(bee$GenusSpecies))
+    ## maybe leave Andrena sp. if it is only at one place?
+    bee$GenusSpecies[bee$GenusSpecies  == "Andrena sp."]  <- NA
+    bee$GenusSpecies[bee$GenusSpecies  == "Halictus sp."]  <- NA
+    bee$GenusSpecies[bee$GenusSpecies  == "Lasioglossum dialictus"]  <- NA
+    bee$GenusSpecies[bee$GenusSpecies  == "Lasioglossum dialictus sp."]  <- NA
+    bee$GenusSpecies[bee$GenusSpecies  == "Lasioglossum sp."]  <- NA
+    bee$GenusSpecies[bee$GenusSpecies  == "Lasioglossum evylaeus"]  <- NA
+    bee$GenusSpecies[bee$GenusSpecies  == "Lasioglossum egregium"]  <- NA
+    bee$GenusSpecies[bee$GenusSpecies  == "Melissodes sp."]  <- NA
+
+    print(id(bee$GenusSpecies))
+
+    bee$Date <- as.Date(bee$Date, "%m/%d/%y")
+    bee$Year <- format(bee$Date, "%Y")
+
+    ## print(paste("rows before dropping NA species ids", nrow(bee)))
+    ## bee <- bee[!is.na(bee$GenusSpecies),]
+
+    ## print(paste("rows after dropping NA species ids", nrow(bee)))
+
+    print(paste("number of duplicated rows to be dropped", sum(duplicated(bee))))
+
+    bee <- bee[!duplicated(bee),]
+    return(bee)
+}
 
 
-bee$GenSp <- fix.white.space(bee$GenSp)
-id(bee$GenSp)
+bee <- cleanBees(insect2)
 
-bee$GenSp[bee$GenSp  == "Andrena sp."]  <- NA
-bee$GenSp[bee$GenSp  == "Ceratina damaged"]  <- NA
-bee$GenSp[bee$GenSp  == "Bombus damaged"]  <- NA
-bee$GenSp[bee$GenSp  == "Andrena damaged"]  <- NA
-bee$GenSp[bee$GenSp  == "Halictus sp."]  <- NA
-bee$GenSp[bee$GenSp  == "Lasioglossum damaged"]  <- NA
-bee$GenSp[bee$GenSp  == "Lasioglossum dialictus"]  <- NA
-bee$GenSp[bee$GenSp  == "Lasioglossum dialictus sp."]  <- NA
-bee$GenSp[bee$GenSp  == "Lasioglossum dialictus damaged"]  <- NA
-bee$GenSp[bee$GenSp  == "Lasioglossum evylaeus damaged"]  <- NA
-bee$GenSp[bee$GenSp  == "Lasioglossum sp."]  <- NA
-bee$GenSp[bee$GenSp  == "Lasioglossum evylaeus"]  <- NA
-bee$GenSp[bee$GenSp  == "Lasioglossum egregium"]  <- NA
-bee$GenSp[bee$GenSp  == "Melissodes sp."]  <- NA
+## drop round 4
+bee <- bee[bee$Round != 4,]
 
-id(bee$GenSp)
+## drop years before 2019
+bee <- bee[bee$Year == 2019,]
 
-bee$Date <- as.Date(bee$Date, "%m/%d/%y")
-bee$Year <- format(bee$Date, "%Y")
+## create a method column to distingish pans and van
+bee$Method <- "Net"
+bee$Method[bee$Trap.type %in% c("BPT", "WPT", "YPT")]  <- "Pan"
+bee$Method[bee$Trap.type %in% c("BVT")]  <- "Vane"
+
+print("number of rows with duplicated uniqueIDs with the same species ID")
+print(sum(duplicated(cbind(bee$ID, bee$GenusSpecies))))
+
+print("number of rows with duplicated uniqueIDs")
+print(sum(duplicated(bee$ID)))
+
+bee.check <- bee %>%
+    group_by(Stand,  Year, Round) %>%
+    summarise(methods=length(unique(Trap.type)))
+
+write.csv(bee.check, file = "samples.csv", row.names=FALSE)
+
+sample.type <- unique(bee$Trap.type)
+
+## create a master sheet of all the possible vane, pan and net samples
+combos <- expand.grid(Stand= unique(bee$Stand),
+                      Round= 1:3,
+                      Trap.type  =sample.type)
+
+combos$Year  <- 2019
+write.csv(combos, file = "master_samples.csv", row.names=FALSE)
 
 
-wild.bee  <- bee[bee$GenSp != "Apis mellifera",]
-
-## generate abundance of bees in each sample round
-## calculate bee abundance with just net data
-## calculate bee richness with net + pan data
-bee.sum <- wild.bee %>%
+## generate abundance of bees in each sample round, method (pan, net, vane)
+bee.sum <- bee %>%
     group_by(Stand, Round, Trap.type, Year) %>%
-    summarise(BeeRichness = length(unique(GenSp[!is.na(GenSp)])),
+    summarise(BeeRichness = length(unique(GenusSpecies[!is.na(GenusSpecies)])),
               BeeDiversity =
-                  vegan::diversity(table(GenSp[!is.na(GenSp)]),
+                  vegan::diversity(table(GenusSpecies[!is.na(GenusSpecies)]),
                                    index="shannon"),
-              BeeAbund=sum(Count))
+              BeeAbund=sum(Count), ## 1 if its a real bee
+              HBAbund = sum(GenusSpecies == "Apis mellifera", na.rm=TRUE))
 
-## mean richness across all collection types
-mean.bee.rich <- bee.sum %>%
-    group_by(Stand, Year) %>%
-    summarise(MeanBeeRichness = mean(BeeRichness, na.rm=TRUE))
+bee.sum.combo <- merge(combos, bee.sum, all.x=TRUE)
 
-## mean for each collection type
-mean.bee.abund <- bee.sum %>%
-    group_by(Stand, Trap.type, Year) %>%
-    summarise(MeanBeeAbund=mean(BeeAbund, na.rm=TRUE),
-              MeanBeeDiversity=mean(BeeDiversity, na.rm=TRUE))
+write.csv(bee.sum.combo, file = "all_combos.csv", row.names=FALSE)
 
-## mean.bee.abund <- mean.bee.abund[mean.bee.abund$Trap.type == "Net" &
-##                                  mean.bee.abund$Year == "2019",]
+## need to fix
+bee.sum.combo[is.na(bee.sum.combo$BeeRichness), c("BeeRichness",
+                                                  "BeeDiversity",
+                                                  "BeeAbund",
+                                                  "HBAbund")]  <- 0
 
-## if we drop the non-netted data, most sites don't have data
-
-mean.bee.abund <- bee.sum %>%
+## take the mean across sample types across the year at a stand
+mean.bee <- bee.sum.combo %>%
     group_by(Stand, Year) %>%
     summarise(MeanBeeAbund=mean(BeeAbund, na.rm=TRUE),
-              MeanBeeDiversity=mean(BeeDiversity, na.rm=TRUE))
-
-mean.bee.abund$MeanBeeAbund[is.na(mean.bee.abund$MeanBeeAbund)] <- 0
-mean.bee.abund$MeanBeeDiversity[is.na(mean.bee.abund$MeanBeeDiversity)] <- 0
-
-## We only want bees from 2019 when the parasite screenings took place
-mean.bee.abund <- mean.bee.abund[mean.bee.abund$Year == "2019",]
-mean.bee.rich <- mean.bee.rich[mean.bee.rich$Year == "2019",]
-
-## remove columsn we don't want
-mean.bee.abund$Trap.type <- NULL
-mean.bee.abund$Year <- NULL
-mean.bee.rich$Year <- NULL
+              MeanBeeDiversity=mean(BeeDiversity, na.rm=TRUE),
+              MeanBeeRichness=mean(BeeRichness, na.rm=TRUE),
+              MeanHBAbund=mean(HBAbund, na.rm=TRUE))
 
 ## merge to site-level data
-stand.info <- merge(stand.info, mean.bee.abund, all.x=TRUE)
-stand.info <- merge(stand.info, mean.bee.rich, all.x=TRUE)
+stand.info <- merge(stand.info, mean.bee, all.x=TRUE)
+
+## stands with no bees netted or in pans
+no.bees <- unique(stand.info$Stand[is.na(stand.info$MeanBeeAbund)])
+bee$Stand[bee$Stand %in% no.bees]
 
 stand.info$MeanBeeRichness[is.na(stand.info$MeanBeeRichness)] <- 0
 stand.info$MeanBeeDiversity[is.na(stand.info$MeanBeeDiversity)] <- 0
 stand.info$MeanBeeAbund[is.na(stand.info$MeanBeeAbund)] <- 0
+stand.info$MeanBeeAbund[is.na(stand.info$HBAbund)] <- 0
 
-## ***********************************************************
-## honey bees
-## ***********************************************************
-## honey bees from net data
+## investigate stand with ~40 bees
+etreme.stand.bee <- stand.info[stand.info$MeanBeeAbund ==
+                           max(stand.info$MeanBeeAbund),]
 
-hb.bee <- bee[bee$Genus == "Apis",]
+print("Stand with max bees")
+unique(etreme.stand.bee$Stand)
+print("number of bees")
+print(max(stand.info$MeanBeeAbund))
 
-hb.sum <- hb.bee %>%
-    group_by(Stand, Round, Trap.type, Year) %>%
-    summarise(BeeAbund=sum(Count, na.rm=TRUE))
-
-mean.hb <- hb.sum %>%
-    group_by(Stand, Trap.type, Year) %>%
-    summarise(MeanHBAbund=mean(BeeAbund, na.rm=TRUE))
-
-mean.hb <- mean.hb[mean.hb$Year == "2019",]
-
-mean.hb$Trap.type <- NULL
-mean.hb$Year <- NULL
-
-stand.info <- merge(stand.info, mean.hb, all.x=TRUE)
-stand.info$MeanHBAbund[is.na(stand.info$MeanHBAbund)] <- 0
-
+## bee[bee$Stand == etreme.stand.bee$Stand,]
 
 f.hist <- function(){
     layout(matrix(1:4, ncol=1))
@@ -319,14 +406,13 @@ f.hist <- function(){
     hist(stand.info$MeanHBAbund, main= "Honey bee abundance", xlab="")
 
 }
-pdf.f(f.hist, file="figures/bees.pdf",
+pdf.f(f.hist, file="figures/bees_newdata.pdf",
       height=12, width=4)
 
 
 ## ***********************************************************
 ## nest block data
 ## ***********************************************************
-
 ## we are just using females from Osmia nests in blocks
 ## where samples were not pulled for parasite tests
 
@@ -340,7 +426,7 @@ repro$Notes <- NULL
 repro$Total <- NULL
 
 ## drop any data from the Pathogen study
-repro <- repro[!repro$box_type == "Path",]
+repro <- repro[repro$box_type != "Path",]
 
 ## confirm that only data is from reproductive study, "FPH" blocks
 unique(repro$box_type)
@@ -361,6 +447,11 @@ repro$SumOffspring <- repro$Females + repro$Males
 ## for each stand, average the number of females and females at each block
 ## end up with Block A averages and Block B averages for each site
 
+repro <- repro[repro$Year == "2019",]
+
+write.csv(repro, file = "repro_cleaned.csv",
+          row.names=FALSE)
+
 repro.block <- aggregate(list(Females=repro$Females,
                               Males=repro$Males),
                          list(Stand=repro$Stand,
@@ -370,12 +461,30 @@ repro.block <- aggregate(list(Females=repro$Females,
 
 repro.block <- repro.block[repro.block$Year == "2019",]
 
+## check over data
+repro.check <- aggregate(repro$Block,
+                         list(Stand=repro$Stand,
+                              Block=repro$Block,
+                              Row=repro$Row,
+                              Year=repro$Year),
+                         length)
+
+write.csv(repro.check, file = "block_row_counts.csv", row.names=FALSE)
+
+repro.check2 <- aggregate(repro$Block,
+                         list(Stand=repro$Stand,
+                              Block=repro$Block,
+                              Year=repro$Year),
+                         length)
+
+write.csv(repro.check2, file = "block_counts.csv", row.names=FALSE)
+
+
 ## add more offspring summary data to block-level averages
 ## above 1 F > M, below 1 M>F, = 1 M=F
 repro.block$FM_ratio <-  log(repro.block$Females +1)/log(repro.block$Males +1)
 
 repro.block$SumOffspring <-  repro.block$Females + repro.block$Males
-
 
 ## create a new block level dataset to describe reprodata, with stand
 ## info merged
@@ -394,9 +503,6 @@ pdf.f(f.hist, file="figures/parasitism.pdf", height=12, width=4)
 
 ## merge site level sick totals to our reproductive, block-level dataset
 repro.block <- merge(repro.block, sick.totals, all.x=TRUE)
-
-
-
 
 ## INDIVIDUAL LEVEL DATASET ********
 
@@ -433,18 +539,21 @@ dim(indiv.data)
 ## we are done with the stand-level dataset, let's rename it
 site.data <- stand.info
 
-drop.cols <- c("CenterLat", "CenterLon",
-                     "InfectedCrith", "InfectedApicys",
-                     "InfectedAsco", "CrithRate", "AscoRate",
-                     "ApicysRate", "FlowerRichness", "MeanStemAbund",
-               "MeanCanopy", "MeanBeeRichness")
+## drop.cols <- c("CenterLat", "CenterLon",
+##                      "InfectedCrith", "InfectedApicys",
+##                      "InfectedAsco", "CrithRate", "AscoRate",
+##                      "ApicysRate", "FlowerRichness", "MeanStemAbund",
+##                "MeanCanopy", "MeanBeeRichness")
+
+drop.cols <- c("CenterLat", "CenterLon", "MeanStemAbund", "Age_LandOwner")
 
 indiv.data <- indiv.data[!colnames(indiv.data) %in% drop.cols]
 stand.info <- stand.info[!colnames(stand.info) %in% drop.cols]
 
 repro.block <- repro.block[, c("Stand", "ParasitismRate",
                                "SumOffspring",
-                               "Owner", "Acres", "Age", "Elev",
+                               "Owner", "Acres",
+                               "Age_LandTrendr", "Elev",
                                "CenterLat", "CenterLon",
                                "FlowerDiversity",
                                "MeanBloomAbund",
@@ -452,11 +561,11 @@ repro.block <- repro.block[, c("Stand", "ParasitismRate",
                                "MeanHBAbund", "Block", "Year")]
 
 ## subset down to only data with parasites or nest reproduction
-osmia.stands <- unique(repro.block$Stand[!is.na(repro.block$SumOffspring)])
-length(osmia.stands)
+## osmia.stands <- unique(repro.block$Stand[!is.na(repro.block$SumOffspring)])
+## length(osmia.stands)
 
-indiv.data <- indiv.data[indiv.data$Stand %in% osmia.stands,]
-stand.info <- stand.info[stand.info$Stand %in% osmia.stands,]
+## indiv.data <- indiv.data[indiv.data$Stand %in% osmia.stands,]
+## stand.info <- stand.info[stand.info$Stand %in% osmia.stands,]
 
 write.csv(indiv.data, file=file.path(dir,
                                      "indivData.csv"), row.names=FALSE)
@@ -480,27 +589,27 @@ save(site.data,
 
 ## summary stats for ms
 
-only.screened <- indiv.data[!is.na(indiv.data$TestedTotals),]
+## only.screened <- indiv.data[!is.na(indiv.data$TestedTotals),]
 
-sites.screened <- unique(only.screened$Stand)
+## sites.screened <- unique(only.screened$Stand)
 
-bee.screened  <- bee[bee$Stand %in% sites.screened,]
-bee.screened <- bee.screened[bee.screened$Year == "2019",]
+## bee.screened  <- bee[bee$Stand %in% sites.screened,]
+## bee.screened <- bee.screened[bee.screened$Year == "2019",]
 
-bee.sum.screened <- bee.screened %>%
-    summarise(BeeRichness = length(unique(GenSp[!is.na(GenSp)])),
+bee.sum.screened <- bee %>%
+    summarise(BeeRichness = length(unique(GenusSpecies[!is.na(GenusSpecies)])),
               BeeDiversity =
-                  vegan::diversity(table(GenSp[!is.na(GenSp)]),
+                  vegan::diversity(table(GenusSpecies[!is.na(GenusSpecies)]),
                                    index="shannon"),
               BeeAbund=sum(Count),
               BeeGenera=length(unique(Genus[!is.na(Genus)])),)
 
 bee.sum.screened
 
-floral.screened  <- floral[floral$Stand %in% sites.screened,]
-floral.screened <- floral.screened[floral.screened$Year == "2019",]
+## floral.screened  <- floral[floral$Stand %in% sites.screened,]
+## floral.screened <- floral.screened[floral.screened$Year == "2019",]
 
-floral.sum.screened <- floral.screened%>%
+floral.sum.screened <- floral %>%
     summarise(FlowerRichness =
                   length(unique(Flower_sci)),
               FlowerDiversity=
@@ -509,10 +618,10 @@ floral.sum.screened <- floral.screened%>%
               BloomAbund=sum(Blooms, na.rm=TRUE))
 floral.sum.screened
 
-parasite.sum.screened <- only.screened[only.screened$ApidaeCtrl == 1,] %>%
-    summarise(Apicystis = mean(Apicystis),
-              Ascophaera= mean(Ascophaera),
-              Crithidia= mean(Crithidia))
+parasite.sum.screened <- indiv.data[indiv.data$ApidaeCtrl == 1,] %>%
+    summarise(Apicystis = mean(Apicystis, na.rm=TRUE),
+              Ascophaera= mean(Ascophaera, na.rm=TRUE),
+              Crithidia= mean(Crithidia, na.rm=TRUE))
 
 
 parasite.sum.screened
