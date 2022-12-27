@@ -43,11 +43,11 @@ vars <- c("FlowerDiversity",
           "Acres",
           "Elev")
 
+## log variables for age and acres
 indiv.data$Age_LandTrendr <- log(indiv.data$Age_LandTrendr)
 indiv.data$Acres <- log(indiv.data$Acres)
 repro.block$Age_LandTrendr <- log(repro.block$Age_LandTrendr)
 repro.block$Acres <- log(repro.block$Acres)
-
 
 ##  center all of the x variables across the datasets
 indiv.data[, vars] <- apply(indiv.data[, vars], 2, standardize)
@@ -61,21 +61,17 @@ repro.block$ParasitismRate <- standardize(repro.block$ParasitismRate)
 
 indiv.data <- makeDataMultiLevel(indiv.data, "Stand")
 repro.block <- makeDataMultiLevel(repro.block, "Stand")
-
 indiv.data$Owner <- factor(indiv.data$Owner,
                            levels= c("OwnerA", "OwnerB", "OwnerC", "ODF"))
-
 
 ## create a dummy varaible "WeightPar" for the parasite data. The
 ## intention is to keep stan from dropping data for site-level models,
 ## but weight is 0 for parasite models.
-
 indiv.data$WeightsPar <- 1
 indiv.data$WeightsPar[is.na(indiv.data$AnyParasite)] <- 0
 
 ## stan drops all NA data, so can set AnyParasite to 0 with WeightsPar
-## to keep it in the models, this is commented out because we don't
-
+## to keep it in the models
 indiv.data$AnyParasite[is.na(indiv.data$AnyParasite)] <- 0
 
 ## **********************************************************
@@ -85,7 +81,8 @@ indiv.data$AnyParasite[is.na(indiv.data$AnyParasite)] <- 0
 
 ## flower diversity
 formula.flower.div <- formula(FlowerDiversity | weights(Weights) ~
-                              + Age_LandTrendr + I(Age_LandTrendr^2) +  Elev + Owner
+                                  + Age_LandTrendr + I(Age_LandTrendr^2) +
+                                      Elev + Owner
                               )
 ## flower abund
 formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
@@ -98,13 +95,13 @@ formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
 
 ## bee diversity
 formula.bee.div <- formula(MeanBeeDiversity | weights(Weights)~
-                                   FlowerDiversity +
-                                   Age_LandTrendr*Acres)
+                               FlowerDiversity +
+                                   Age_LandTrendr + Acres)
 
 ## bee abund
 formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
                                  MeanBloomAbund +
-                                     Age_LandTrendr*Acres)
+                                     Age_LandTrendr + Acres)
 
 ## **********************************************************
 ## Model 1.3: formula for bee community effects on parasitism
@@ -150,16 +147,6 @@ fit <- brm(bform, indiv.data,
            thin=1,
            init=0,
            control = list(adapt_delta = 0.99))
-
-
-fit.test <- brm(bf.bdiv, indiv.data,
-           cores=ncores,
-           iter = 10^4,
-           chains =1,
-           thin=1,
-           init=0,
-           control = list(adapt_delta = 0.99))
-
 
 write.ms.table(fit, "parasitism_poly")
 save(fit, indiv.data,
