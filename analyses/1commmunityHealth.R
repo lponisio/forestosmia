@@ -21,7 +21,8 @@ source("src/misc.R")
 
 
 ## set to the number of cores you would like the models to run on
-ncores <- 2
+ncores <- 10
+
 
 ## **********************************************************
 ## formula for site effects on the bee community
@@ -38,18 +39,21 @@ vars <- c("FlowerDiversity",
           "MeanBeeDiversity",
           "MeanBeeAbund",
           "MeanHBAbund",
-          "Age",
+          "Age_LandTrendr",
           "Acres",
           "Elev")
 
-indiv.data$Age <- log(indiv.data$Age +1)
-repro.block$Age <- log(repro.block$Age + 1)
+indiv.data$Age_LandTrendr <- log(indiv.data$Age_LandTrendr)
+indiv.data$Acres <- log(indiv.data$Acres)
+repro.block$Age_LandTrendr <- log(repro.block$Age_LandTrendr)
+repro.block$Acres <- log(repro.block$Acres)
+
 
 ##  center all of the x variables across the datasets
 indiv.data[, vars] <- apply(indiv.data[, vars], 2, standardize)
 repro.block[, vars] <- apply(repro.block[, vars], 2, standardize)
 
-## repro.block$ParasitismRate <- standardize(repro.block$ParasitismRate)
+repro.block$ParasitismRate <- standardize(repro.block$ParasitismRate)
 
 ## create a dummy varaible "Weight" to deal with the data sets being at
 ## different levels to get around the issue of having to pass in one
@@ -63,8 +67,8 @@ indiv.data$Owner <- factor(indiv.data$Owner,
 
 
 ## create a dummy varaible "WeightPar" for the parasite data. The
-## original intention was to keep stan from dropping data for
-## site-level models, but weight is 0 for parasite models.
+## intention is to keep stan from dropping data for site-level models,
+## but weight is 0 for parasite models.
 
 indiv.data$WeightsPar <- 1
 indiv.data$WeightsPar[is.na(indiv.data$AnyParasite)] <- 0
@@ -81,11 +85,11 @@ indiv.data$AnyParasite[is.na(indiv.data$AnyParasite)] <- 0
 
 ## flower diversity
 formula.flower.div <- formula(FlowerDiversity | weights(Weights) ~
-                              + Age + Elev + Owner
+                              + Age_LandTrendr + I(Age_LandTrendr^2) +  Elev + Owner
                               )
 ## flower abund
 formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
-                                        Age  + Elev + Owner
+                                        Age_LandTrendr  + Elev + Owner
                                 )
 
 ## **********************************************************
@@ -94,15 +98,13 @@ formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
 
 ## bee diversity
 formula.bee.div <- formula(MeanBeeDiversity | weights(Weights)~
-                               MeanBloomAbund +
                                    FlowerDiversity +
-                                   Age)
+                                   Age_LandTrendr*Acres)
 
 ## bee abund
 formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
                                  MeanBloomAbund +
-                                     FlowerDiversity +
-                                     Age + Acres  )
+                                     Age_LandTrendr*Acres)
 
 ## **********************************************************
 ## Model 1.3: formula for bee community effects on parasitism
@@ -113,16 +115,14 @@ formula.parasite <- formula(AnyParasite | weights(WeightsPar) ~
                                     FlowerDiversity +
                                     MeanBeeDiversity +
                                     MeanBloomAbund +
-                                    MeanHBAbund +
                                     (1|Stand)
                             )
 
 formula.parasite.site <- formula(scale(ParasitismRate) | weights(Weights) ~
                                      MeanBeeAbund +
                                      MeanBeeDiversity +
-                                     MeanBloomAbund +
-                                     FlowerDiversity +
-                                     MeanHBAbund
+                                      MeanBloomAbund +
+                                      FlowerDiversity
                                  )
 
 ## convert to brms format
@@ -146,83 +146,91 @@ bform <- bf.fabund + bf.fdiv + bf.babund + bf.bdiv + bf.par +
 fit <- brm(bform, indiv.data,
            cores=ncores,
            iter = 10^4,
-           chains =1,
+           chains =3,
            thin=1,
-           inits=0,
+           init=0,
            control = list(adapt_delta = 0.99))
 
-write.ms.table(fit, "parasitism")
+
+fit.test <- brm(bf.bdiv, indiv.data,
+           cores=ncores,
+           iter = 10^4,
+           chains =1,
+           thin=1,
+           init=0,
+           control = list(adapt_delta = 0.99))
+
+
+write.ms.table(fit, "parasitism_poly")
 save(fit, indiv.data,
      file="saved/parasiteFitMod.Rdata")
 
 ## dignostic figures
-mcmc_trace(fit)
-ggsave("figures/diagnostics/parasite.pdf",
-       height=11, width=8.5)
+plot.res(fit, "parasite")
 
 ## ************************************************************
 ## Model 2.1 formulas for the site effects on nest reproduction
 ## ************************************************************
 
-## ## can use total offspring or total female offspring as the response
-## ## variable
+## can use total offspring or total female offspring as the response
+## variable
 
-## imp.dat.pre <- mice(repro.block, m = 2,
-##                     print = FALSE)
+## data  imputation
+imp.dat.pre <- mice(repro.block, m = 2,
+                    print = FALSE)
 
-## pred <- imp.dat.pre$pred
-## pred[, c("Weights", "Block", "SiteIDs", "Year")] <- 0
-## pred[, c("Stand", "Owner")] <- 1
+pred <- imp.dat.pre$pred
+pred[, c("Weights", "Block", "SiteIDs", "Year")] <- 0
+pred[, c("Stand", "Owner")] <- 1
 
-## meth <- imp.dat.pre$meth
-## meth[c(2)] <- "rf"
+meth <- imp.dat.pre$meth
+meth[c(2)] <- "rf"
 
-## imp.dat <- mice(repro.block, m = 100, predictorMatrix=pred,
-##                 method=meth,
-##                 print = FALSE)
+imp.dat <- mice(repro.block, m = 100, predictorMatrix=pred,
+                method=meth,
+                print = FALSE)
 
 
-## densityplot(imp.dat)
-## plot(imp.dat, c("ParasitismRate"))
+densityplot(imp.dat)
+plot(imp.dat, c("ParasitismRate"))
 
-## ys <- c("SumOffspring")
+ys <- c("SumOffspring")
 
-## xvar.NestRepro <- c("scale(ParasitismRate)",
-##     "MeanBloomAbund",
-##     "FlowerDiversity",
-##     "MeanBeeAbund",
-##     "MeanHBAbund")
+xvar.NestRepro <- c("scale(ParasitismRate)",
+    "MeanBloomAbund",
+    "FlowerDiversity",
+    "MeanBeeAbund")
 
-## formulas.NestRepro <-lapply(ys, function(x) {
-##   as.formula(paste(x, "~",
-##                    paste(paste(xvar.NestRepro, collapse="+"),
-##                          "(1|Stand)",
-##                          sep="+")))
-## })
+formulas.NestRepro <-lapply(ys, function(x) {
+  as.formula(paste(x, "~",
+                   paste(paste(xvar.NestRepro, collapse="+"),
+                         "(1|Stand)",
+                         sep="+")))
+})
 
-## bf.offspring <- bf(formulas.NestRepro[[1]], family="negbinomial")
+bf.offspring <- bf(formulas.NestRepro[[1]], family="negbinomial")
 
-## ## full model
-## bform2 <-    bf.par.site +
-##     bf.offspring +
-##     set_rescor(FALSE)
+## full model
+bform2 <-    bf.par.site +
+    bf.offspring +
+    set_rescor(FALSE)
 
-## ## run model
-## fit2 <- brm_multiple(bform2, data=imp.dat,
-##            cores=ncores,
-##            iter = 10^4,
-##            chains = 1,
-##            inits=0,
-##            thin=1,
-##            control = list(adapt_delta = 0.99,
-##                           max_treedepth = 15))
+## run model
+fit2 <- brm_multiple(bform2, data=imp.dat,
+           cores=ncores,
+           iter = 5*10^4,
+           chains = 2,
+           inits=0,
+           thin=2,
+           control = list(adapt_delta = 0.99,
+                          max_treedepth = 15))
 
-## write.ms.table(fit2, "offspring")
+write.ms.table(fit2, "offspring")
 
-## save(fit2, repro.block,
-##      file="saved/offspringFitMod.Rdata")
+save(fit2, repro.block,
+     file="saved/offspringFitMod.Rdata")
 
-## ## diagnostic plots
-## mcmc_trace(fit2)
-## ggsave("figures/diagnostics/offspring.pdf",
-##        height=11, width=8.5)
+## diagnostic plots
+mcmc_trace(fit2)
+ggsave("figures/diagnostics/offspring.pdf",
+       height=11, width=8.5)
