@@ -25,46 +25,30 @@ load(file="saved/parasiteFitMod.Rdata")
 ## ***********************************************************************
 
 indiv.data.orig$Age_LandTrendr <- log(indiv.data.orig$Age_LandTrendr)
-
 labs.age.x <- (pretty(c(indiv.data.orig$Age_LandTrendr),
                       n=10))
-
 axis.age.x <-  standardize.axis(labs.age.x, indiv.data.orig$Age_LandTrendr)
-
-
 labs.bloom.abund <- (pretty(c(0, indiv.data.orig$MeanBloomAbund), n=10))
 axis.bloom.abund <-  standardize.axis(labs.bloom.abund,
                                       indiv.data.orig$MeanBloomAbund)
-
-
 indiv.data.orig$Acres <- log(indiv.data.orig$Acres)
-
 labs.acres <- (pretty(indiv.data.orig$Acres, n=10))
 axis.acres <-  standardize.axis(labs.acres,
                                 indiv.data.orig$Acres)
-
-
 labs.bee.abund2 <- (pretty(c(0,
                              indiv.data.orig$MeanBeeAbund[
-                                                 !is.na(indiv.data.orig$AnyParasite)]),
-                           n=10))
+                             !is.na(indiv.data.orig$AnyParasite)]), n=10))
 axis.bee.abund2 <-  standardize.axis(labs.bee.abund2,
                                      indiv.data.orig$MeanBeeAbund)
-
-
 labs.flower.div <- (pretty(indiv.data.orig$FlowerDiversity, n=10))
 axis.flower.div <-  standardize.axis(labs.flower.div,
                                      indiv.data.orig$FlowerDiversity)
-
-
 labs.flower.div.repro <- (pretty(repro.block.orig$FlowerDiversity, n=10))
 axis.flower.div.repro <-  standardize.axis(labs.flower.div.repro,
                                            repro.block.orig$FlowerDiversity)
-
 labs.bee.abund <- (pretty(c(0, indiv.data.orig$MeanBeeAbund), n=10))
 axis.bee.abund <-  standardize.axis(labs.bee.abund,
                                     indiv.data.orig$MeanBeeAbund)
-
 labs.bee.div <- (pretty(c(0, indiv.data.orig$MeanBeeDiversity), n=10))
 axis.bee.div <-  standardize.axis(labs.bee.div,
                                   indiv.data.orig$MeanBeeDiversity)
@@ -118,56 +102,14 @@ p1.parasite  <- fit %>%
            ) %>%
     unnest(MeanBeeDiversity) %>%
     mutate(pred = exp(
-               ## b_MeanBloomAbund_Intercept+
-               ## b_FlowerDiversity_Intercept+
-               ## b_MeanBeeAbund_Intercept+
-               ## b_MeanBeeDiversity_Intercept+
                b_AnyParasite_Intercept+
-               ## b_MeanBloomAbund_Age_LandTrendr*Age_LandTrendr +
-               ## b_MeanBloomAbund_Elev*Elev +
-               ## b_MeanBloomAbund_OwnerOwnerB +
-               ## b_MeanBloomAbund_OwnerOwnerC +
-               ## b_MeanBloomAbund_OwnerODF +
-               ## b_FlowerDiversity_Age_LandTrendr*Age_LandTrendr +
-               ## b_FlowerDiversity_IAge_LandTrendrE2*Age_LandTrendr +
-               ## b_FlowerDiversity_Elev*Elev +
-               ## b_FlowerDiversity_OwnerOwnerB +
-               ## b_FlowerDiversity_OwnerOwnerC +
-               ## b_FlowerDiversity_OwnerODF +
-               ## b_MeanBeeAbund_MeanBloomAbund*MeanBloomAbund +
-               ## b_MeanBeeAbund_Age_LandTrendr*Age_LandTrendr +
-               ## b_MeanBeeAbund_Acres*Acres +
-               ## b_MeanBeeDiversity_FlowerDiversity*FlowerDiversity +
-               ## b_MeanBeeDiversity_Age_LandTrendr*Age_LandTrendr +
-               ## b_MeanBeeDiversity_Acres*Acres +
                b_AnyParasite_MeanBeeAbund*MeanBeeAbund +
                b_AnyParasite_FlowerDiversity*FlowerDiversity +
                b_AnyParasite_MeanBeeDiversity*MeanBeeDiversity +
                b_AnyParasite_MeanBloomAbund*MeanBloomAbund
            )/
                (1+exp(
-                      ## b_MeanBloomAbund_Intercept+
-                      ## b_FlowerDiversity_Intercept+
-                      ## b_MeanBeeAbund_Intercept+
-                      ## b_MeanBeeDiversity_Intercept+
                       b_AnyParasite_Intercept+
-                      ## b_MeanBloomAbund_Age_LandTrendr*Age_LandTrendr +
-                      ## b_MeanBloomAbund_Elev*Elev +
-                      ## b_MeanBloomAbund_OwnerOwnerB +
-                      ## b_MeanBloomAbund_OwnerOwnerC +
-                      ## b_MeanBloomAbund_OwnerODF +
-                      ## b_FlowerDiversity_Age_LandTrendr*Age_LandTrendr +
-                      ## b_FlowerDiversity_IAge_LandTrendrE2*Age_LandTrendr +
-                      ## b_FlowerDiversity_Elev*Elev +
-                      ## b_FlowerDiversity_OwnerOwnerB +
-                      ## b_FlowerDiversity_OwnerOwnerC +
-                      ## b_FlowerDiversity_OwnerODF +
-                      ## b_MeanBeeAbund_MeanBloomAbund*MeanBloomAbund +
-                      ## b_MeanBeeAbund_Age_LandTrendr*Age_LandTrendr +
-                      ## b_MeanBeeAbund_Acres*Acres +
-                      ## b_MeanBeeDiversity_FlowerDiversity*FlowerDiversity +
-                      ## b_MeanBeeDiversity_Age_LandTrendr*Age_LandTrendr +
-                      ## b_MeanBeeDiversity_Acres*Acres +
                       b_AnyParasite_MeanBeeAbund*MeanBeeAbund +
                       b_AnyParasite_FlowerDiversity*FlowerDiversity +
                       b_AnyParasite_MeanBeeDiversity*MeanBeeDiversity +
@@ -248,56 +190,14 @@ p2.parasite  <- fit %>%
            ) %>%
     unnest(MeanBeeAbund) %>%
     mutate(pred = exp(
-               ## b_MeanBloomAbund_Intercept+
-               ## b_FlowerDiversity_Intercept+
-               ## b_MeanBeeAbund_Intercept+
-               ## b_MeanBeeDiversity_Intercept+
                b_AnyParasite_Intercept+
-               ## b_MeanBloomAbund_Age_LandTrendr*Age_LandTrendr +
-               ## b_MeanBloomAbund_Elev*Elev +
-               ## b_MeanBloomAbund_OwnerOwnerB +
-               ## b_MeanBloomAbund_OwnerOwnerC +
-               ## b_MeanBloomAbund_OwnerODF +
-               ## b_FlowerDiversity_Age_LandTrendr*Age_LandTrendr +
-               ## b_FlowerDiversity_IAge_LandTrendrE2*Age_LandTrendr +
-               ## b_FlowerDiversity_Elev*Elev +
-               ## b_FlowerDiversity_OwnerOwnerB +
-               ## b_FlowerDiversity_OwnerOwnerC +
-               ## b_FlowerDiversity_OwnerODF +
-               ## b_MeanBeeAbund_MeanBloomAbund*MeanBloomAbund +
-               ## b_MeanBeeAbund_Age_LandTrendr*Age_LandTrendr +
-               ## b_MeanBeeAbund_Acres*Acres +
-               ## b_MeanBeeDiversity_FlowerDiversity*FlowerDiversity +
-               ## b_MeanBeeDiversity_Age_LandTrendr*Age_LandTrendr +
-               ## b_MeanBeeDiversity_Acres*Acres +
                b_AnyParasite_MeanBeeAbund*MeanBeeAbund +
                b_AnyParasite_FlowerDiversity*FlowerDiversity +
                b_AnyParasite_MeanBeeDiversity*MeanBeeDiversity +
                b_AnyParasite_MeanBloomAbund*MeanBloomAbund
            )/
                (1+exp(
-                      ## b_MeanBloomAbund_Intercept+
-                      ## b_FlowerDiversity_Intercept+
-                      ## b_MeanBeeAbund_Intercept+
-                      ## b_MeanBeeDiversity_Intercept+
                       b_AnyParasite_Intercept+
-                      ## b_MeanBloomAbund_Age_LandTrendr*Age_LandTrendr +
-                      ## b_MeanBloomAbund_Elev*Elev +
-                      ## b_MeanBloomAbund_OwnerOwnerB +
-                      ## b_MeanBloomAbund_OwnerOwnerC +
-                      ## b_MeanBloomAbund_OwnerODF +
-                      ## b_FlowerDiversity_Age_LandTrendr*Age_LandTrendr +
-                      ## b_FlowerDiversity_IAge_LandTrendrE2*Age_LandTrendr +
-                      ## b_FlowerDiversity_Elev*Elev +
-                      ## b_FlowerDiversity_OwnerOwnerB +
-                      ## b_FlowerDiversity_OwnerOwnerC +
-                      ## b_FlowerDiversity_OwnerODF +
-                      ## b_MeanBeeAbund_MeanBloomAbund*MeanBloomAbund +
-                      ## b_MeanBeeAbund_Age_LandTrendr*Age_LandTrendr +
-                      ## b_MeanBeeAbund_Acres*Acres +
-                      ## b_MeanBeeDiversity_FlowerDiversity*FlowerDiversity +
-                      ## b_MeanBeeDiversity_Age_LandTrendr*Age_LandTrendr +
-                      ## b_MeanBeeDiversity_Acres*Acres +
                       b_AnyParasite_MeanBeeAbund*MeanBeeAbund +
                       b_AnyParasite_FlowerDiversity*FlowerDiversity +
                       b_AnyParasite_MeanBeeDiversity*MeanBeeDiversity +
@@ -498,32 +398,10 @@ p1.bee  <- fit %>%
            ) %>%
     unnest(Acres) %>%
     mutate(pred =
-               ## b_MeanBloomAbund_Intercept+
-               ## b_FlowerDiversity_Intercept+
                b_MeanBeeAbund_Intercept+
-               ## b_MeanBeeDiversity_Intercept+
-               ## b_AnyParasite_Intercept+
-               ## b_MeanBloomAbund_Age_LandTrendr*Age_LandTrendr +
-               ## b_MeanBloomAbund_Elev*Elev +
-               ## b_MeanBloomAbund_OwnerOwnerB +
-               ## b_MeanBloomAbund_OwnerOwnerC +
-               ## b_MeanBloomAbund_OwnerODF +
-               ## b_FlowerDiversity_Age_LandTrendr*Age_LandTrendr +
-               ## b_FlowerDiversity_IAge_LandTrendrE2*Age_LandTrendr +
-               ## b_FlowerDiversity_Elev*Elev +
-               ## b_FlowerDiversity_OwnerOwnerB +
-               ## b_FlowerDiversity_OwnerOwnerC +
-               ## b_FlowerDiversity_OwnerODF +
                b_MeanBeeAbund_MeanBloomAbund*MeanBloomAbund +
                b_MeanBeeAbund_Age_LandTrendr*Age_LandTrendr +
                b_MeanBeeAbund_Acres*Acres
-               ## b_MeanBeeDiversity_FlowerDiversity*FlowerDiversity +
-               ## b_MeanBeeDiversity_Age_LandTrendr*Age_LandTrendr +
-               ## b_MeanBeeDiversity_Acres*Acres +
-               ## b_AnyParasite_MeanBeeAbund*MeanBeeAbund +
-               ## b_AnyParasite_FlowerDiversity*FlowerDiversity +
-               ## b_AnyParasite_MeanBeeDiversity*MeanBeeDiversity +
-               ## b_AnyParasite_MeanBloomAbund*MeanBloomAbund
                ) %>%
     group_by(Acres) %>%
     summarise(pred_m = mean(pred, na.rm = TRUE),
@@ -603,32 +481,10 @@ p2.bee  <- fit %>%
            ) %>%
     unnest(FlowerDiversity) %>%
     mutate(pred =
-               ## b_MeanBloomAbund_Intercept+
-               ## b_FlowerDiversity_Intercept+
-               ## b_MeanBeeAbund_Intercept+
                b_MeanBeeDiversity_Intercept+
-               ## b_AnyParasite_Intercept+
-               ## b_MeanBloomAbund_Age_LandTrendr*Age_LandTrendr +
-               ## b_MeanBloomAbund_Elev*Elev +
-               ## b_MeanBloomAbund_OwnerOwnerB +
-               ## b_MeanBloomAbund_OwnerOwnerC +
-               ## b_MeanBloomAbund_OwnerODF +
-               ## b_FlowerDiversity_Age_LandTrendr*Age_LandTrendr +
-               ## b_FlowerDiversity_IAge_LandTrendrE2*Age_LandTrendr +
-               ## b_FlowerDiversity_Elev*Elev +
-               ## b_FlowerDiversity_OwnerOwnerB +
-               ## b_FlowerDiversity_OwnerOwnerC +
-               ## b_FlowerDiversity_OwnerODF +
-               ## b_MeanBeeAbund_MeanBloomAbund*MeanBloomAbund +
-               ## b_MeanBeeAbund_Age_LandTrendr*Age_LandTrendr +
-               ## b_MeanBeeAbund_Acres*Acres +
                b_MeanBeeDiversity_FlowerDiversity*FlowerDiversity +
                b_MeanBeeDiversity_Age_LandTrendr*Age_LandTrendr +
                b_MeanBeeDiversity_Acres*Acres
-               ## b_AnyParasite_MeanBeeAbund*MeanBeeAbund +
-               ## b_AnyParasite_FlowerDiversity*FlowerDiversity +
-               ## b_AnyParasite_MeanBeeDiversity*MeanBeeDiversity +
-               ## b_AnyParasite_MeanBloomAbund*MeanBloomAbund
                ) %>%
     group_by(FlowerDiversity) %>%
     summarise(pred_m = mean(pred, na.rm = TRUE),
