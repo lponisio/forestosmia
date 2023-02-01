@@ -26,32 +26,34 @@ load(file="saved/parasiteFitMod.Rdata")
 
 indiv.data.orig$Age_LandTrendr <- log(indiv.data.orig$Age_LandTrendr)
 labs.age.x <- (pretty(c(indiv.data.orig$Age_LandTrendr),
-                      n=10))
+                      n=8))
 axis.age.x <-  standardize.axis(labs.age.x, indiv.data.orig$Age_LandTrendr)
-labs.bloom.abund <- (pretty(c(0, indiv.data.orig$MeanBloomAbund), n=10))
+labs.bloom.abund <- (pretty(c(0, indiv.data.orig$MeanBloomAbund), n=8))
 axis.bloom.abund <-  standardize.axis(labs.bloom.abund,
                                       indiv.data.orig$MeanBloomAbund)
 indiv.data.orig$Acres <- log(indiv.data.orig$Acres)
-labs.acres <- (pretty(indiv.data.orig$Acres, n=10))
+labs.acres <- (pretty(indiv.data.orig$Acres, n=8))
 axis.acres <-  standardize.axis(labs.acres,
                                 indiv.data.orig$Acres)
 labs.bee.abund2 <- (pretty(c(0,
                              indiv.data.orig$MeanBeeAbund[
-                             !is.na(indiv.data.orig$AnyParasite)]), n=10))
+                             !is.na(indiv.data.orig$AnyParasite)]), n=8))
 axis.bee.abund2 <-  standardize.axis(labs.bee.abund2,
                                      indiv.data.orig$MeanBeeAbund)
-labs.flower.div <- (pretty(indiv.data.orig$FlowerDiversity, n=10))
+labs.flower.div <- (pretty(indiv.data.orig$FlowerDiversity, n=8))
 axis.flower.div <-  standardize.axis(labs.flower.div,
                                      indiv.data.orig$FlowerDiversity)
-labs.flower.div.repro <- (pretty(repro.block.orig$FlowerDiversity, n=10))
+labs.flower.div.repro <- (pretty(repro.block.orig$FlowerDiversity, n=8))
 axis.flower.div.repro <-  standardize.axis(labs.flower.div.repro,
                                            repro.block.orig$FlowerDiversity)
-labs.bee.abund <- (pretty(c(0, indiv.data.orig$MeanBeeAbund), n=10))
+labs.bee.abund <- (pretty(c(0, indiv.data.orig$MeanBeeAbund), n=8))
 axis.bee.abund <-  standardize.axis(labs.bee.abund,
                                     indiv.data.orig$MeanBeeAbund)
-labs.bee.div <- (pretty(c(0, indiv.data.orig$MeanBeeDiversity), n=10))
+labs.bee.div <- (pretty(c(0, indiv.data.orig$MeanBeeDiversity), n=8))
 axis.bee.div <-  standardize.axis(labs.bee.div,
                                   indiv.data.orig$MeanBeeDiversity)
+
+cols <- brewer.pal(3, "Blues")
 
 ## ***********************************************************************
 ## bee community diversity and abundance and parasitism
@@ -59,91 +61,133 @@ axis.bee.div <-  standardize.axis(labs.bee.div,
 
 data.par <- indiv.data[indiv.data$WeightsPar == 1, ]
 
-## parasitism ~ bee diversity
-p1.parasite  <- fit %>%
-    spread_draws(
-        b_MeanBloomAbund_Intercept,
-        b_FlowerDiversity_Intercept,
-        b_MeanBeeAbund_Intercept,
-        b_MeanBeeDiversity_Intercept,
-        b_AnyParasite_Intercept,
-        b_MeanBloomAbund_Age_LandTrendr,
-        b_MeanBloomAbund_Elev,
-        b_MeanBloomAbund_OwnerOwnerB,
-        b_MeanBloomAbund_OwnerOwnerC,
-        b_MeanBloomAbund_OwnerODF,
-        b_FlowerDiversity_Age_LandTrendr,
-        b_FlowerDiversity_IAge_LandTrendrE2,
-        b_FlowerDiversity_Elev,
-        b_FlowerDiversity_OwnerOwnerB,
-        b_FlowerDiversity_OwnerOwnerC,
-        b_FlowerDiversity_OwnerODF,
-        b_MeanBeeAbund_MeanBloomAbund,
-        b_MeanBeeAbund_Age_LandTrendr,
-        b_MeanBeeAbund_Acres,
-        b_MeanBeeDiversity_FlowerDiversity,
-        b_MeanBeeDiversity_Age_LandTrendr,
-        b_MeanBeeDiversity_Acres,
-        b_AnyParasite_MeanBeeAbund,
-        b_AnyParasite_FlowerDiversity,
-        b_AnyParasite_MeanBeeDiversity,
-        b_AnyParasite_MeanBloomAbund
-    ) %>%
-    mutate(MeanBeeDiversity =
-               list(seq(min(data.par$MeanBeeDiversity),
-                        max(data.par$MeanBeeDiversity),
-                        0.1)),
-           FlowerDiversity= mean(data.par$FlowerDiversity),
-           MeanBeeAbund= mean(data.par$MeanBeeAbund),
-           MeanBloomAbund= mean(data.par$MeanBloomAbund),
-           Elev= mean(data.par$Elev),
-           Acres= mean(data.par$Acres),
-           Age_LandTrendr= mean(data.par$Age_LandTrendr)
-           ) %>%
-    unnest(MeanBeeDiversity) %>%
-    mutate(pred = exp(
-               b_AnyParasite_Intercept+
-               b_AnyParasite_MeanBeeAbund*MeanBeeAbund +
-               b_AnyParasite_FlowerDiversity*FlowerDiversity +
-               b_AnyParasite_MeanBeeDiversity*MeanBeeDiversity +
-               b_AnyParasite_MeanBloomAbund*MeanBloomAbund
-           )/
-               (1+exp(
-                      b_AnyParasite_Intercept+
-                      b_AnyParasite_MeanBeeAbund*MeanBeeAbund +
-                      b_AnyParasite_FlowerDiversity*FlowerDiversity +
-                      b_AnyParasite_MeanBeeDiversity*MeanBeeDiversity +
-                      b_AnyParasite_MeanBloomAbund*MeanBloomAbund
-                  ))) %>%
-    group_by(MeanBeeDiversity) %>%
-    summarise(pred_m = mean(pred, na.rm = TRUE),
-              pred_low_95 = quantile(pred, prob = 0.025),
-              pred_high_95 = quantile(pred, prob = 0.975),
-              pred_low_90 = quantile(pred, prob = 0.05),
-              pred_high_90 = quantile(pred, prob = 0.95),
-              pred_low_85 = quantile(pred, prob = 0.075),
-              pred_high_85 = quantile(pred, prob = 0.925)) %>%
-    ggplot(aes(x = MeanBeeDiversity, y = pred_m)) +
-    geom_line(color="white") +
-    geom_ribbon(aes(ymin = pred_low_95, ymax = pred_high_95), alpha=0.2,
-                fill="grey80") +
-    geom_ribbon(aes(ymin = pred_low_90, ymax = pred_high_90), alpha=0.2,
-                fill="grey80") +
-    geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
-                fill="grey80") +
-    ylab("Parasite Prevalence") +
-    xlab("Bee community diversity") +
+newdata.beediv <- crossing(MeanBeeDiversity =
+                         seq(min(data.par$MeanBeeDiversity),
+                             max(data.par$MeanBeeDiversity),
+                             length.out=10),
+                     Age_LandTrendr =mean(data.par$Age_LandTrendr),
+                     Elev=mean(data.par$Elev),
+                     Owner="ODF",
+                     Stand="Backgrove",
+                     MeanBloomAbund=mean(data.par$MeanBloomAbund),
+                     Acres=mean(data.par$Acres),
+                     FlowerDiversity=mean(data.par$FlowerDiversity),
+                     MeanBeeAbund=mean(data.par$MeanBeeAbund)
+                     )
+
+pred_beediv <- fit %>%
+    epred_draws(newdata = newdata,
+                resp = "AnyParasite")
+
+p1.parasite <- ggplot(pred_beediv, aes(x = MeanBeeDiversity, y = .epred)) +
+    stat_lineribbon() +
+    scale_fill_brewer(palette = "Blues") +
+    labs(x = "Bee community diversity", y = "Parasite Prevalence",
+         fill = "Credible interval") +
+    theme(legend.position = "bottom") +
     scale_x_continuous(
         breaks = axis.bee.div,
         labels =  labs.bee.div) +
     theme(axis.title.x = element_text(size=16),
           axis.title.y = element_text(size=16),
           text = element_text(size=16)) +
-                                        #    #theme_classic() +
+    ##    theme_ms() +
     theme_dark_black()+
     geom_point(data=indiv.data[indiv.data$Weights == 1 &
                                indiv.data$WeightsPar == 1,],
-               aes(y=ParasitismRate, x=MeanBeeDiversity, colour="white"))
+               aes(y=ParasitismRate, x=MeanBeeDiversity),
+               color="white")
+
+
+
+
+## ## parasitism ~ bee diversity
+## p1.parasite  <- fit %>%
+##     spread_draws(
+##         b_MeanBloomAbund_Intercept,
+##         b_FlowerDiversity_Intercept,
+##         b_MeanBeeAbund_Intercept,
+##         b_MeanBeeDiversity_Intercept,
+##         b_AnyParasite_Intercept,
+##         b_MeanBloomAbund_Age_LandTrendr,
+##         b_MeanBloomAbund_Elev,
+##         b_MeanBloomAbund_OwnerOwnerB,
+##         b_MeanBloomAbund_OwnerOwnerC,
+##         b_MeanBloomAbund_OwnerOwnerA,
+##         b_FlowerDiversity_Age_LandTrendr,
+##         b_FlowerDiversity_IAge_LandTrendrE2,
+##         b_FlowerDiversity_Elev,
+##         b_FlowerDiversity_OwnerOwnerB,
+##         b_FlowerDiversity_OwnerOwnerC,
+##         b_FlowerDiversity_OwnerOwnerA,
+##         b_MeanBeeAbund_MeanBloomAbund,
+##         b_MeanBeeAbund_Age_LandTrendr,
+##         b_MeanBeeAbund_Acres,
+##         b_MeanBeeDiversity_FlowerDiversity,
+##         b_MeanBeeDiversity_Age_LandTrendr,
+##         b_MeanBeeDiversity_Acres,
+##         b_AnyParasite_MeanBeeAbund,
+##         b_AnyParasite_FlowerDiversity,
+##         b_AnyParasite_MeanBeeDiversity,
+##         b_AnyParasite_MeanBloomAbund
+##     ) %>%
+##     mutate(MeanBeeDiversity =
+##                list(seq(min(data.par$MeanBeeDiversity),
+##                         max(data.par$MeanBeeDiversity),
+##                         0.1)),
+##            FlowerDiversity= mean(data.par$FlowerDiversity),
+##            MeanBeeAbund= mean(data.par$MeanBeeAbund),
+##            MeanBloomAbund= mean(data.par$MeanBloomAbund),
+##            Elev= mean(data.par$Elev),
+##            Owner="ODF",
+##            Acres= mean(data.par$Acres),
+##            Age_LandTrendr= mean(data.par$Age_LandTrendr)
+##            ) %>%
+##     unnest(MeanBeeDiversity) %>%
+##     mutate(pred = exp(
+##                b_AnyParasite_Intercept+
+##                b_AnyParasite_MeanBeeAbund*MeanBeeAbund +
+##                b_AnyParasite_FlowerDiversity*FlowerDiversity +
+##                b_AnyParasite_MeanBeeDiversity*MeanBeeDiversity +
+##                b_AnyParasite_MeanBloomAbund*MeanBloomAbund
+##            )/
+##                (1+exp(
+##                       b_AnyParasite_Intercept+
+##                       b_AnyParasite_MeanBeeAbund*MeanBeeAbund +
+##                       b_AnyParasite_FlowerDiversity*FlowerDiversity +
+##                       b_AnyParasite_MeanBeeDiversity*MeanBeeDiversity +
+##                       b_AnyParasite_MeanBloomAbund*MeanBloomAbund
+##                   ))) %>%
+##     group_by(MeanBeeDiversity) %>%
+##     summarise(pred_m = mean(pred, na.rm = TRUE),
+##               pred_low_95 = quantile(pred, prob = 0.025),
+##               pred_high_95 = quantile(pred, prob = 0.975),
+##               pred_low_90 = quantile(pred, prob = 0.05),
+##               pred_high_90 = quantile(pred, prob = 0.95),
+##               pred_low_85 = quantile(pred, prob = 0.075),
+##               pred_high_85 = quantile(pred, prob = 0.925)) %>%
+##     ggplot(aes(x = MeanBeeDiversity, y = pred_m)) +
+##     geom_line(color="white") +
+##     geom_ribbon(aes(ymin = pred_low_95, ymax = pred_high_95), alpha=0.2,
+##                 fill=cols[1]) +
+##     geom_ribbon(aes(ymin = pred_low_90, ymax = pred_high_90), alpha=0.2,
+##                 fill=cols[1]) +
+##     geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
+##                 fill=cols[1]) +
+##     ylab("Parasite Prevalence") +
+##     xlab("Bee community diversity") +
+##     scale_x_continuous(
+##         breaks = axis.bee.div,
+##         labels =  labs.bee.div) +
+##     theme(axis.title.x = element_text(size=16),
+##           axis.title.y = element_text(size=16),
+##           text = element_text(size=16)) +
+##  ##     theme_ms() +
+##      theme_dark_black()+
+##     geom_point(data=indiv.data[indiv.data$Weights == 1 &
+##                                indiv.data$WeightsPar == 1,],
+##                aes(y=ParasitismRate, x=MeanBeeDiversity),
+##                    color="white")
 
 
 
@@ -159,13 +203,13 @@ p2.parasite  <- fit %>%
         b_MeanBloomAbund_Elev,
         b_MeanBloomAbund_OwnerOwnerB,
         b_MeanBloomAbund_OwnerOwnerC,
-        b_MeanBloomAbund_OwnerODF,
+        b_MeanBloomAbund_OwnerOwnerA,
         b_FlowerDiversity_Age_LandTrendr,
         b_FlowerDiversity_IAge_LandTrendrE2,
         b_FlowerDiversity_Elev,
         b_FlowerDiversity_OwnerOwnerB,
         b_FlowerDiversity_OwnerOwnerC,
-        b_FlowerDiversity_OwnerODF,
+        b_FlowerDiversity_OwnerOwnerA,
         b_MeanBeeAbund_MeanBloomAbund,
         b_MeanBeeAbund_Age_LandTrendr,
         b_MeanBeeAbund_Acres,
@@ -214,11 +258,11 @@ p2.parasite  <- fit %>%
     ggplot(aes(x = MeanBeeAbund, y = pred_m)) +
     geom_line(color="white") +
     geom_ribbon(aes(ymin = pred_low_95, ymax = pred_high_95), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_90, ymax = pred_high_90), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     ylab("Parasite Prevalence") +
     xlab("Bee abundance") +
     scale_x_continuous(
@@ -227,21 +271,21 @@ p2.parasite  <- fit %>%
     theme(axis.title.x = element_text(size=16),
           axis.title.y = element_text(size=16),
           text = element_text(size=16)) +
-                                        #    #theme_classic() +
-    theme_dark_black()+
+ ##     theme_ms() +
+     theme_dark_black()+
     geom_point(data=indiv.data[indiv.data$Weights == 1 &
                                indiv.data$WeightsPar == 1,],
-               aes(y=ParasitismRate, x=MeanBeeAbund, colour="white"))
+               aes(y=ParasitismRate, x=MeanBeeAbund), color="white")
 
-ggsave(p1.parasite, file="figures/parasite_beeDiv_dark.pdf",
+ggsave(p1.parasite, file="figures/parasite_beeDiv.pdf",
        height=4, width=5)
 
-ggsave(p2.parasite, file="figures/parasite_beeAbund_dark.pdf",
+ggsave(p2.parasite, file="figures/parasite_beeAbund.pdf",
        height=4, width=5)
 
 parasite.all <- grid.arrange(p1.parasite, p2.parasite, ncol=2)
 
-ggsave(parasite.all, file="figures/all_parasite_dark.pdf",
+ggsave(parasite.all, file="figures/all_parasite.pdf",
        height=4, width=10)
 
 
@@ -279,76 +323,77 @@ p1.offspring <- fit2 %>%
     ##               labels = trans_format("log10", math_format(10^.x)),
     ##               limits=c(1,10^4))+
     geom_ribbon(aes(ymin = pred_low_95, ymax = pred_high_95), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_90, ymax = pred_high_90), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     ylab("Osmia offspring") +
     xlab("Floral community diversity") +
     theme(axis.title.x = element_text(size=16),
           axis.title.y = element_text(size=16),
           text = element_text(size=16)) +
-                                        #theme_classic() +
-    theme_dark_black()+
+ ##     theme_ms() +
+     theme_dark_black()+
     geom_point(data=repro.block[repro.block$SumOffspring >=
                                 offspring.quantiles[[1]] &
-                                repro.block$SumOffspring <= offspring.quantiles[[2]],],
-               aes(y=SumOffspring, x=FlowerDiversity, color="white"))
+                                repro.block$SumOffspring <=
+                                offspring.quantiles[[2]],],
+               aes(y=SumOffspring, x=FlowerDiversity), color="white")
 
 ggsave(p1.offspring, file="figures/offspring_floraldiv.pdf",
        height=4, width=5)
 
-## bee abund
-p2.offspring <- fit2 %>%
-    spread_draws(b_SumOffspring_Intercept,
-                 b_SumOffspring_MeanBeeAbund) %>%
-    mutate(MeanBeeAbund =
-               list(seq(round(range(repro.block$MeanBeeAbund)[1],1),
-                        round(range(repro.block$MeanBeeAbund)[2], 1),
-                        1))) %>%
-    unnest(MeanBeeAbund) %>%
-    mutate(pred = exp(b_SumOffspring_Intercept +
-                      b_SumOffspring_MeanBeeAbund*MeanBeeAbund)) %>%
-    group_by(MeanBeeAbund) %>%
-    summarise(pred_m = mean(pred, na.rm = TRUE),
-              pred_low_95 = quantile(pred, prob = 0.025),
-              pred_high_95 = quantile(pred, prob = 0.975),
-              pred_low_90 = quantile(pred, prob = 0.05),
-              pred_high_90 = quantile(pred, prob = 0.95),
-              pred_low_85 = quantile(pred, prob = 0.075),
-              pred_high_85 = quantile(pred, prob = 0.925)) %>%
-    ggplot(aes(x = MeanBeeAbund, y = pred_m)) +
-    geom_line(color="white") +
-    scale_x_continuous(
-        breaks = axis.flower.div,
-        labels =  labs.flower.div) +
-    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
-                  labels = trans_format("log10", math_format(10^.x)),
-                  limits=c(1,10^4)) +
-    geom_ribbon(aes(ymin = pred_low_95, ymax = pred_high_95), alpha=0.2,
-                fill="grey80") +
-    geom_ribbon(aes(ymin = pred_low_90, ymax = pred_high_90), alpha=0.2,
-                fill="grey80") +
-    geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
-                fill="grey80") +
-    ylab("") +
-    xlab("Bee abundance") +
-    theme(axis.title.x = element_text(size=16),
-          axis.title.y = element_text(size=16),
-          text = element_text(size=16)) +
-                                        #theme_classic() +
-    theme_dark_black()+
-    geom_point(data=repro.block,
-               aes(y=SumOffspring, x=MeanBeeAbund, color="white"))
+## ## bee abund
+## p2.offspring <- fit2 %>%
+##     spread_draws(b_SumOffspring_Intercept,
+##                  b_SumOffspring_MeanBeeAbund) %>%
+##     mutate(MeanBeeAbund =
+##                list(seq(round(range(repro.block$MeanBeeAbund)[1],1),
+##                         round(range(repro.block$MeanBeeAbund)[2], 1),
+##                         1))) %>%
+##     unnest(MeanBeeAbund) %>%
+##     mutate(pred = exp(b_SumOffspring_Intercept +
+##                       b_SumOffspring_MeanBeeAbund*MeanBeeAbund)) %>%
+##     group_by(MeanBeeAbund) %>%
+##     summarise(pred_m = mean(pred, na.rm = TRUE),
+##               pred_low_95 = quantile(pred, prob = 0.025),
+##               pred_high_95 = quantile(pred, prob = 0.975),
+##               pred_low_90 = quantile(pred, prob = 0.05),
+##               pred_high_90 = quantile(pred, prob = 0.95),
+##               pred_low_85 = quantile(pred, prob = 0.075),
+##               pred_high_85 = quantile(pred, prob = 0.925)) %>%
+##     ggplot(aes(x = MeanBeeAbund, y = pred_m)) +
+##     geom_line(color="white") +
+##     scale_x_continuous(
+##         breaks = axis.flower.div,
+##         labels =  labs.flower.div) +
+##     scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+##                   labels = trans_format("log10", math_format(10^.x)),
+##                   limits=c(1,10^4)) +
+##     geom_ribbon(aes(ymin = pred_low_95, ymax = pred_high_95), alpha=0.2,
+##                 fill=cols[1]) +
+##     geom_ribbon(aes(ymin = pred_low_90, ymax = pred_high_90), alpha=0.2,
+##                 fill=cols[1]) +
+##     geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
+##                 fill=cols[1]) +
+##     ylab("") +
+##     xlab("Bee abundance") +
+##     theme(axis.title.x = element_text(size=16),
+##           axis.title.y = element_text(size=16),
+##           text = element_text(size=16)) +
+##  ##     theme_ms() +
+##      theme_dark_black()+
+##     geom_point(data=repro.block,
+##                aes(y=SumOffspring, x=MeanBeeAbund), color="white")
 
-ggsave(p2.offspring, file="figures/offspring_beeAbund.pdf",
-       height=4, width=5)
+## ggsave(p2.offspring, file="figures/offspring_beeAbund.pdf",
+##        height=4, width=5)
 
-offspring <- grid.arrange(p1.offspring, p2.offspring, ncol=2)
+## offspring <- grid.arrange(p1.offspring, p2.offspring, ncol=2)
 
-ggsave(offspring, file="figures/offspring.pdf",
-       height=4, width=10)
+## ggsave(offspring, file="figures/offspring.pdf",
+##        height=4, width=10)
 
 
 ## ***********************************************************************
@@ -367,13 +412,13 @@ p1.bee  <- fit %>%
         b_MeanBloomAbund_Elev,
         b_MeanBloomAbund_OwnerOwnerB,
         b_MeanBloomAbund_OwnerOwnerC,
-        b_MeanBloomAbund_OwnerODF,
+        b_MeanBloomAbund_OwnerOwnerA,
         b_FlowerDiversity_Age_LandTrendr,
         b_FlowerDiversity_IAge_LandTrendrE2,
         b_FlowerDiversity_Elev,
         b_FlowerDiversity_OwnerOwnerB,
         b_FlowerDiversity_OwnerOwnerC,
-        b_FlowerDiversity_OwnerODF,
+        b_FlowerDiversity_OwnerOwnerA,
         b_MeanBeeAbund_MeanBloomAbund,
         b_MeanBeeAbund_Age_LandTrendr,
         b_MeanBeeAbund_Acres,
@@ -402,7 +447,7 @@ p1.bee  <- fit %>%
                b_MeanBeeAbund_MeanBloomAbund*MeanBloomAbund +
                b_MeanBeeAbund_Age_LandTrendr*Age_LandTrendr +
                b_MeanBeeAbund_Acres*Acres
-               ) %>%
+           ) %>%
     group_by(Acres) %>%
     summarise(pred_m = mean(pred, na.rm = TRUE),
               pred_low_95 = quantile(pred, prob = 0.025),
@@ -414,11 +459,11 @@ p1.bee  <- fit %>%
     ggplot(aes(x = Acres, y = pred_m)) +
     geom_line(color="white") +
     geom_ribbon(aes(ymin = pred_low_95, ymax = pred_high_95), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_90, ymax = pred_high_90), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     ylab("Bee abundance") +
     xlab("Stand area (log acres)") +
     scale_x_continuous(
@@ -430,13 +475,13 @@ p1.bee  <- fit %>%
     theme(axis.title.x = element_text(size=16),
           axis.title.y = element_text(size=16),
           text = element_text(size=16)) +
-                                        #theme_classic() +
-    theme_dark_black()+
+ ##     theme_ms() +
+     theme_dark_black()+
     geom_point(data=indiv.data[indiv.data$Weights == 1  &
                                !is.na(indiv.data$AnyParasite) &
                                indiv.data$MeanBeeAbund !=
                                max(indiv.data$MeanBeeAbund),],
-               aes(y=MeanBeeAbund, x=Acres, color="white"))
+               aes(y=MeanBeeAbund, x=Acres), color="white")
 
 ## Bee diversity ~ floral diversity
 p2.bee  <- fit %>%
@@ -450,13 +495,13 @@ p2.bee  <- fit %>%
         b_MeanBloomAbund_Elev,
         b_MeanBloomAbund_OwnerOwnerB,
         b_MeanBloomAbund_OwnerOwnerC,
-        b_MeanBloomAbund_OwnerODF,
+        b_MeanBloomAbund_OwnerOwnerA,
         b_FlowerDiversity_Age_LandTrendr,
         b_FlowerDiversity_IAge_LandTrendrE2,
         b_FlowerDiversity_Elev,
         b_FlowerDiversity_OwnerOwnerB,
         b_FlowerDiversity_OwnerOwnerC,
-        b_FlowerDiversity_OwnerODF,
+        b_FlowerDiversity_OwnerOwnerA,
         b_MeanBeeAbund_MeanBloomAbund,
         b_MeanBeeAbund_Age_LandTrendr,
         b_MeanBeeAbund_Acres,
@@ -485,7 +530,7 @@ p2.bee  <- fit %>%
                b_MeanBeeDiversity_FlowerDiversity*FlowerDiversity +
                b_MeanBeeDiversity_Age_LandTrendr*Age_LandTrendr +
                b_MeanBeeDiversity_Acres*Acres
-               ) %>%
+           ) %>%
     group_by(FlowerDiversity) %>%
     summarise(pred_m = mean(pred, na.rm = TRUE),
               pred_low_95 = quantile(pred, prob = 0.025),
@@ -497,11 +542,11 @@ p2.bee  <- fit %>%
     ggplot(aes(x = FlowerDiversity, y = pred_m)) +
     geom_line(color="white") +
     geom_ribbon(aes(ymin = pred_low_95, ymax = pred_high_95), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_90, ymax = pred_high_90), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     ylab("Bee community diversity") +
     xlab("Floral diversity") +
     scale_x_continuous(
@@ -513,11 +558,11 @@ p2.bee  <- fit %>%
     theme(axis.title.x = element_text(size=16),
           axis.title.y = element_text(size=16),
           text = element_text(size=16)) +
-                                        #theme_classic() +
-    theme_dark_black()+
+ ##     theme_ms() +
+     theme_dark_black()+
     geom_point(data=indiv.data[indiv.data$Weights == 1  &
                                !is.na(indiv.data$AnyParasite),],
-               aes(y=MeanBeeDiversity, x=FlowerDiversity, color="white"))
+               aes(y=MeanBeeDiversity, x=FlowerDiversity), color="white")
 
 bee.plots <- grid.arrange(p1.bee, p2.bee, ncol=1)
 
@@ -536,32 +581,32 @@ ggsave(bee.plots, file="figures/beeComm.pdf",
 
 ## floral abundance ~ year post harvest
 p1.flower.age <- fit %>%
-    spread_draws(  b_MeanBloomAbund_Intercept,
-        b_FlowerDiversity_Intercept,
-        b_MeanBeeAbund_Intercept,
-        b_MeanBeeDiversity_Intercept,
-        b_AnyParasite_Intercept,
-        b_MeanBloomAbund_Age_LandTrendr,
-        b_MeanBloomAbund_Elev,
-        b_MeanBloomAbund_OwnerOwnerB,
-        b_MeanBloomAbund_OwnerOwnerC,
-        b_MeanBloomAbund_OwnerODF,
-        b_FlowerDiversity_Age_LandTrendr,
-        b_FlowerDiversity_IAge_LandTrendrE2,
-        b_FlowerDiversity_Elev,
-        b_FlowerDiversity_OwnerOwnerB,
-        b_FlowerDiversity_OwnerOwnerC,
-        b_FlowerDiversity_OwnerODF,
-        b_MeanBeeAbund_MeanBloomAbund,
-        b_MeanBeeAbund_Age_LandTrendr,
-        b_MeanBeeAbund_Acres,
-        b_MeanBeeDiversity_FlowerDiversity,
-        b_MeanBeeDiversity_Age_LandTrendr,
-        b_MeanBeeDiversity_Acres,
-        b_AnyParasite_MeanBeeAbund,
-        b_AnyParasite_FlowerDiversity,
-        b_AnyParasite_MeanBeeDiversity,
-        b_AnyParasite_MeanBloomAbund) %>%
+    spread_draws(b_MeanBloomAbund_Intercept,
+                 b_FlowerDiversity_Intercept,
+                 b_MeanBeeAbund_Intercept,
+                 b_MeanBeeDiversity_Intercept,
+                 b_AnyParasite_Intercept,
+                 b_MeanBloomAbund_Age_LandTrendr,
+                 b_MeanBloomAbund_Elev,
+                 b_MeanBloomAbund_OwnerOwnerB,
+                 b_MeanBloomAbund_OwnerOwnerC,
+                 b_MeanBloomAbund_OwnerOwnerA,
+                 b_FlowerDiversity_Age_LandTrendr,
+                 b_FlowerDiversity_IAge_LandTrendrE2,
+                 b_FlowerDiversity_Elev,
+                 b_FlowerDiversity_OwnerOwnerB,
+                 b_FlowerDiversity_OwnerOwnerC,
+                 b_FlowerDiversity_OwnerOwnerA,
+                 b_MeanBeeAbund_MeanBloomAbund,
+                 b_MeanBeeAbund_Age_LandTrendr,
+                 b_MeanBeeAbund_Acres,
+                 b_MeanBeeDiversity_FlowerDiversity,
+                 b_MeanBeeDiversity_Age_LandTrendr,
+                 b_MeanBeeDiversity_Acres,
+                 b_AnyParasite_MeanBeeAbund,
+                 b_AnyParasite_FlowerDiversity,
+                 b_AnyParasite_MeanBeeDiversity,
+                 b_AnyParasite_MeanBloomAbund) %>%
     mutate(Age_LandTrendr =
                list(seq(min(indiv.data$Age_LandTrendr[!is.na(indiv.data$AnyParasite)]),
                         max(indiv.data$Age_LandTrendr[!is.na(indiv.data$AnyParasite)]),
@@ -580,11 +625,11 @@ p1.flower.age <- fit %>%
     ggplot(aes(x = Age_LandTrendr, y = pred_m)) +
     geom_line(color="white") +
     geom_ribbon(aes(ymin = pred_low_95, ymax = pred_high_95), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_90, ymax = pred_high_90), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     ylab("Floral abundance") +
     xlab("") +
     scale_x_continuous(
@@ -597,40 +642,69 @@ p1.flower.age <- fit %>%
     theme(axis.title.x = element_text(size=16),
           axis.title.y = element_text(size=16),
           text = element_text(size=16)) +
-                                        #theme_classic() +
-    theme_dark_black()+
+ ##     theme_ms() +
+     theme_dark_black()+
     geom_point(data=indiv.data[indiv.data$Weights == 1  &
                                !is.na(indiv.data$AnyParasite),],
-               aes(y=MeanBloomAbund, x=Age_LandTrendr, color="black"))
+               aes(y=MeanBloomAbund, x=Age_LandTrendr), color="white")
+
+## left off here
+## f_quad <-
+##   fitted(fit,
+##          newdata = indiv.data) %>%
+##   as_tibble() %>%
+##   bind_cols(indiv.data)
+
+## p_quad <-
+##   predict(fit,
+##           newdata = indiv.data) %>%
+##   as_tibble() %>%
+##   bind_cols(indiv.data)
+
+
+ggplot(data = d,
+       aes(x = weight_s)) +
+  geom_ribbon(data = p_cub,
+              aes(ymin = Q2.5, ymax = Q97.5),
+              fill = "grey83") +
+  geom_smooth(data = f_cub,
+              aes(y = Estimate, ymin = Q2.5, ymax = Q97.5),
+              stat = "identity",
+              fill = "grey70", color = "white", alpha = 1, size = 1/4) +
+  geom_point(aes(y = height),
+             color = "navyblue", shape = 1, size = 1.5, alpha = 1/3) +
+  coord_cartesian(xlim = range(d$weight_s)) +
+  theme(text = element_text(family = "Times"),
+        panel.grid = element_blank())
 
 ## floral diversity ~ years post harvest
 p2.flower.age <- fit %>%
     spread_draws(  b_MeanBloomAbund_Intercept,
-        b_FlowerDiversity_Intercept,
-        b_MeanBeeAbund_Intercept,
-        b_MeanBeeDiversity_Intercept,
-        b_AnyParasite_Intercept,
-        b_MeanBloomAbund_Age_LandTrendr,
-        b_MeanBloomAbund_Elev,
-        b_MeanBloomAbund_OwnerOwnerB,
-        b_MeanBloomAbund_OwnerOwnerC,
-        b_MeanBloomAbund_OwnerODF,
-        b_FlowerDiversity_Age_LandTrendr,
-        b_FlowerDiversity_IAge_LandTrendrE2,
-        b_FlowerDiversity_Elev,
-        b_FlowerDiversity_OwnerOwnerB,
-        b_FlowerDiversity_OwnerOwnerC,
-        b_FlowerDiversity_OwnerODF,
-        b_MeanBeeAbund_MeanBloomAbund,
-        b_MeanBeeAbund_Age_LandTrendr,
-        b_MeanBeeAbund_Acres,
-        b_MeanBeeDiversity_FlowerDiversity,
-        b_MeanBeeDiversity_Age_LandTrendr,
-        b_MeanBeeDiversity_Acres,
-        b_AnyParasite_MeanBeeAbund,
-        b_AnyParasite_FlowerDiversity,
-        b_AnyParasite_MeanBeeDiversity,
-        b_AnyParasite_MeanBloomAbund
+                 b_FlowerDiversity_Intercept,
+                 b_MeanBeeAbund_Intercept,
+                 b_MeanBeeDiversity_Intercept,
+                 b_AnyParasite_Intercept,
+                 b_MeanBloomAbund_Age_LandTrendr,
+                 b_MeanBloomAbund_Elev,
+                 b_MeanBloomAbund_OwnerOwnerB,
+                 b_MeanBloomAbund_OwnerOwnerC,
+                 b_MeanBloomAbund_OwnerOwnerA,
+                 b_FlowerDiversity_Age_LandTrendr,
+                 b_FlowerDiversity_IAge_LandTrendrE2,
+                 b_FlowerDiversity_Elev,
+                 b_FlowerDiversity_OwnerOwnerB,
+                 b_FlowerDiversity_OwnerOwnerC,
+                 b_FlowerDiversity_OwnerOwnerA,
+                 b_MeanBeeAbund_MeanBloomAbund,
+                 b_MeanBeeAbund_Age_LandTrendr,
+                 b_MeanBeeAbund_Acres,
+                 b_MeanBeeDiversity_FlowerDiversity,
+                 b_MeanBeeDiversity_Age_LandTrendr,
+                 b_MeanBeeDiversity_Acres,
+                 b_AnyParasite_MeanBeeAbund,
+                 b_AnyParasite_FlowerDiversity,
+                 b_AnyParasite_MeanBeeDiversity,
+                 b_AnyParasite_MeanBloomAbund
                  ) %>%
     mutate(Age_LandTrendr =
                list(seq(min(indiv.data$Age_LandTrendr[!is.na(indiv.data$AnyParasite)]),
@@ -651,11 +725,11 @@ p2.flower.age <- fit %>%
     ggplot(aes(x = Age_LandTrendr, y = pred_m)) +
     geom_line(color="white") +
     geom_ribbon(aes(ymin =  pred_low_95, ymax = pred_high_95), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin =  pred_low_90, ymax = pred_high_90), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     ylab("Floral Diversity") +
     xlab("") +
     scale_x_continuous(
@@ -668,40 +742,40 @@ p2.flower.age <- fit %>%
     theme(axis.title.x = element_text(size=16),
           axis.title.y = element_text(size=16),
           text = element_text(size=16)) +
-                                        #theme_classic() +
-    theme_dark_black()+
+ ##     theme_ms() +
+     theme_dark_black()+
     geom_point(data=indiv.data[indiv.data$Weights == 1 &
                                !is.na(indiv.data$AnyParasite),],
-               aes(y=FlowerDiversity, x=Age_LandTrendr, color="white"))
+               aes(y=FlowerDiversity, x=Age_LandTrendr), color="white")
 
 ## bee abundance ~ years post harvest
 p3.bee.age <- fit %>%
     spread_draws(  b_MeanBloomAbund_Intercept,
-        b_FlowerDiversity_Intercept,
-        b_MeanBeeAbund_Intercept,
-        b_MeanBeeDiversity_Intercept,
-        b_AnyParasite_Intercept,
-        b_MeanBloomAbund_Age_LandTrendr,
-        b_MeanBloomAbund_Elev,
-        b_MeanBloomAbund_OwnerOwnerB,
-        b_MeanBloomAbund_OwnerOwnerC,
-        b_MeanBloomAbund_OwnerODF,
-        b_FlowerDiversity_Age_LandTrendr,
-        b_FlowerDiversity_IAge_LandTrendrE2,
-        b_FlowerDiversity_Elev,
-        b_FlowerDiversity_OwnerOwnerB,
-        b_FlowerDiversity_OwnerOwnerC,
-        b_FlowerDiversity_OwnerODF,
-        b_MeanBeeAbund_MeanBloomAbund,
-        b_MeanBeeAbund_Age_LandTrendr,
-        b_MeanBeeAbund_Acres,
-        b_MeanBeeDiversity_FlowerDiversity,
-        b_MeanBeeDiversity_Age_LandTrendr,
-        b_MeanBeeDiversity_Acres,
-        b_AnyParasite_MeanBeeAbund,
-        b_AnyParasite_FlowerDiversity,
-        b_AnyParasite_MeanBeeDiversity,
-        b_AnyParasite_MeanBloomAbund) %>%
+                 b_FlowerDiversity_Intercept,
+                 b_MeanBeeAbund_Intercept,
+                 b_MeanBeeDiversity_Intercept,
+                 b_AnyParasite_Intercept,
+                 b_MeanBloomAbund_Age_LandTrendr,
+                 b_MeanBloomAbund_Elev,
+                 b_MeanBloomAbund_OwnerOwnerB,
+                 b_MeanBloomAbund_OwnerOwnerC,
+                 b_MeanBloomAbund_OwnerOwnerA,
+                 b_FlowerDiversity_Age_LandTrendr,
+                 b_FlowerDiversity_IAge_LandTrendrE2,
+                 b_FlowerDiversity_Elev,
+                 b_FlowerDiversity_OwnerOwnerB,
+                 b_FlowerDiversity_OwnerOwnerC,
+                 b_FlowerDiversity_OwnerOwnerA,
+                 b_MeanBeeAbund_MeanBloomAbund,
+                 b_MeanBeeAbund_Age_LandTrendr,
+                 b_MeanBeeAbund_Acres,
+                 b_MeanBeeDiversity_FlowerDiversity,
+                 b_MeanBeeDiversity_Age_LandTrendr,
+                 b_MeanBeeDiversity_Acres,
+                 b_AnyParasite_MeanBeeAbund,
+                 b_AnyParasite_FlowerDiversity,
+                 b_AnyParasite_MeanBeeDiversity,
+                 b_AnyParasite_MeanBloomAbund) %>%
     mutate(Age_LandTrendr =
                list(seq(min(indiv.data$Age_LandTrendr[!is.na(indiv.data$AnyParasite)]),
                         max(indiv.data$Age_LandTrendr[!is.na(indiv.data$AnyParasite)]),
@@ -720,13 +794,13 @@ p3.bee.age <- fit %>%
     ggplot(aes(x = Age_LandTrendr, y = pred_m)) +
     geom_line(color="white") +
     geom_ribbon(aes(ymin = pred_low_95, ymax = pred_high_95), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_90, ymax = pred_high_90), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     ylab("Bee abundance") +
-    xlab("Years post harvest (log)") +
+    xlab("Years post-harvest (log)") +
     scale_x_continuous(
         breaks = axis.age.x,
         labels =  labs.age.x) +
@@ -737,40 +811,40 @@ p3.bee.age <- fit %>%
     theme(axis.title.x = element_text(size=16),
           axis.title.y = element_text(size=16),
           text = element_text(size=16)) +
-                                        #theme_classic() +
+ ##     theme_ms() +
     theme_dark_black()+
     geom_point(data=indiv.data[indiv.data$Weights == 1  &
                                !is.na(indiv.data$AnyParasite),],
-               aes(y=MeanBeeAbund, x=Age_LandTrendr, color="white"))
+               aes(y=MeanBeeAbund, x=Age_LandTrendr), color="white")
 
 ## bee diversity ~ years post harvest
 p4.bee.age <- fit %>%
     spread_draws(  b_MeanBloomAbund_Intercept,
-        b_FlowerDiversity_Intercept,
-        b_MeanBeeAbund_Intercept,
-        b_MeanBeeDiversity_Intercept,
-        b_AnyParasite_Intercept,
-        b_MeanBloomAbund_Age_LandTrendr,
-        b_MeanBloomAbund_Elev,
-        b_MeanBloomAbund_OwnerOwnerB,
-        b_MeanBloomAbund_OwnerOwnerC,
-        b_MeanBloomAbund_OwnerODF,
-        b_FlowerDiversity_Age_LandTrendr,
-        b_FlowerDiversity_IAge_LandTrendrE2,
-        b_FlowerDiversity_Elev,
-        b_FlowerDiversity_OwnerOwnerB,
-        b_FlowerDiversity_OwnerOwnerC,
-        b_FlowerDiversity_OwnerODF,
-        b_MeanBeeAbund_MeanBloomAbund,
-        b_MeanBeeAbund_Age_LandTrendr,
-        b_MeanBeeAbund_Acres,
-        b_MeanBeeDiversity_FlowerDiversity,
-        b_MeanBeeDiversity_Age_LandTrendr,
-        b_MeanBeeDiversity_Acres,
-        b_AnyParasite_MeanBeeAbund,
-        b_AnyParasite_FlowerDiversity,
-        b_AnyParasite_MeanBeeDiversity,
-        b_AnyParasite_MeanBloomAbund) %>%
+                 b_FlowerDiversity_Intercept,
+                 b_MeanBeeAbund_Intercept,
+                 b_MeanBeeDiversity_Intercept,
+                 b_AnyParasite_Intercept,
+                 b_MeanBloomAbund_Age_LandTrendr,
+                 b_MeanBloomAbund_Elev,
+                 b_MeanBloomAbund_OwnerOwnerB,
+                 b_MeanBloomAbund_OwnerOwnerC,
+                 b_MeanBloomAbund_OwnerOwnerA,
+                 b_FlowerDiversity_Age_LandTrendr,
+                 b_FlowerDiversity_IAge_LandTrendrE2,
+                 b_FlowerDiversity_Elev,
+                 b_FlowerDiversity_OwnerOwnerB,
+                 b_FlowerDiversity_OwnerOwnerC,
+                 b_FlowerDiversity_OwnerOwnerA,
+                 b_MeanBeeAbund_MeanBloomAbund,
+                 b_MeanBeeAbund_Age_LandTrendr,
+                 b_MeanBeeAbund_Acres,
+                 b_MeanBeeDiversity_FlowerDiversity,
+                 b_MeanBeeDiversity_Age_LandTrendr,
+                 b_MeanBeeDiversity_Acres,
+                 b_AnyParasite_MeanBeeAbund,
+                 b_AnyParasite_FlowerDiversity,
+                 b_AnyParasite_MeanBeeDiversity,
+                 b_AnyParasite_MeanBloomAbund) %>%
     mutate(Age_LandTrendr =
                list(seq(min(indiv.data$Age_LandTrendr[!is.na(indiv.data$AnyParasite)]),
                         max(indiv.data$Age_LandTrendr[!is.na(indiv.data$AnyParasite)]),
@@ -789,13 +863,13 @@ p4.bee.age <- fit %>%
     ggplot(aes(x = Age_LandTrendr, y = pred_m)) +
     geom_line(color="white") +
     geom_ribbon(aes(ymin =  pred_low_95, ymax = pred_high_95), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin =  pred_low_90, ymax = pred_high_90), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     geom_ribbon(aes(ymin = pred_low_85, ymax = pred_high_85), alpha=0.2,
-                fill="grey80") +
+                fill=cols[1]) +
     ylab("Bee Diversity") +
-    xlab("Years post harvest (log)") +
+    xlab("Years post-harvest (log)") +
     scale_x_continuous(
         breaks = axis.age.x,
         labels =  labs.age.x) +
@@ -806,11 +880,11 @@ p4.bee.age <- fit %>%
     theme(axis.title.x = element_text(size=16),
           axis.title.y = element_text(size=16),
           text = element_text(size=16)) +
-                                        #theme_classic() +
+ ##     theme_ms() +
     theme_dark_black()+
     geom_point(data=indiv.data[indiv.data$Weights == 1 &
                                !is.na(indiv.data$AnyParasite),],
-               aes(y=MeanBeeDiversity, x=Age_LandTrendr, color="white"))
+               aes(y=MeanBeeDiversity, x=Age_LandTrendr), color="white")
 
 age.plots <- grid.arrange(p1.flower.age, p2.flower.age, p3.bee.age,
                           p4.bee.age,
@@ -837,12 +911,12 @@ p1.owner <- ggplot(site.data , aes(x=AgeBin, y=FlowerDiversity)) +
              stat = "identity", position = position_dodge(0.8),
              width = 0.7) +
     coord_flip() +
-    ## geom_boxplot(width=0.1) +
-    scale_fill_brewer(palette="Blues") +     #theme_classic() +
+    scale_fill_brewer(palette="Blues") +
+ ##     theme_ms() +
     theme_dark_black()+
     theme(legend.position="none") +
     ylab("Floral community diversity") +
-    xlab("") + theme_dark_black()
+    xlab("")
 
 
 ggsave(p1.owner, file="figures/flowerDiv_owner.pdf",
@@ -854,12 +928,11 @@ p2.owner <- ggplot(site.data , aes(x=AgeBin, y=MeanBloomAbund)) +
              stat = "identity", position = position_dodge(0.8),
              width = 0.7) +
     coord_flip() +
-    ## geom_boxplot(width=0.1) +
-    scale_fill_brewer(palette="Blues") +     #theme_classic() +
+    scale_fill_brewer(palette="Blues") +
+ ##     theme_ms() +
     theme_dark_black()+
-    ##theme(legend.position="none") +
     ylab("Floral abundance") +
-    xlab("") + theme_dark_black()
+    xlab("")
 
 
 owner.all <- grid.arrange(p1.owner, p2.owner, ncol=2)

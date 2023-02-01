@@ -62,7 +62,7 @@ repro.block$ParasitismRate <- standardize(repro.block$ParasitismRate)
 indiv.data <- makeDataMultiLevel(indiv.data, "Stand")
 repro.block <- makeDataMultiLevel(repro.block, "Stand")
 indiv.data$Owner <- factor(indiv.data$Owner,
-                           levels= c("OwnerA", "OwnerB", "OwnerC", "ODF"))
+                           levels= c("ODF", "OwnerA", "OwnerB", "OwnerC"))
 
 ## create a dummy varaible "WeightPar" for the parasite data. The
 ## intention is to keep stan from dropping data for site-level models,
@@ -146,6 +146,7 @@ fit <- brm(bform, indiv.data,
            chains =3,
            thin=1,
            init=0,
+           open_progress = FALSE,
            control = list(adapt_delta = 0.99))
 
 write.ms.table(fit, "parasitism_poly")
@@ -179,6 +180,7 @@ imp.dat <- mice(repro.block, m = 100, predictorMatrix=pred,
 
 
 densityplot(imp.dat)
+quartz()
 plot(imp.dat, c("ParasitismRate"))
 
 ys <- c("SumOffspring")
@@ -204,13 +206,14 @@ bform2 <-    bf.par.site +
 
 ## run model
 fit2 <- brm_multiple(bform2, data=imp.dat,
-           cores=ncores,
-           iter = 5*10^4,
-           chains = 2,
-           inits=0,
-           thin=2,
-           control = list(adapt_delta = 0.99,
-                          max_treedepth = 15))
+                     cores=ncores,
+                     iter = 5*10^4,
+                     chains = 2,
+                     inits=0,
+                     thin=2,
+                     open_progress = FALSE,
+                     control = list(adapt_delta = 0.99,
+                                    max_treedepth = 15))
 
 write.ms.table(fit2, "offspring")
 
