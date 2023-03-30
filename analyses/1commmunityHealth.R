@@ -1,5 +1,6 @@
-setwd('/Volumes/bombus/Dropbox (University of Oregon)/forestosmia')
-
+## set your working directory to the forestosmia git repo
+setwd('forestosmia')
+setwd("analyses")
 ## Prepares the data for model fitting (standardizes continuous
 ## variables, creates dummy variables to be used as weights to all
 ## different subsets of data to be used in different model levels),
@@ -8,7 +9,6 @@ setwd('/Volumes/bombus/Dropbox (University of Oregon)/forestosmia')
 ## models for Osmia reproduction, missing parasite prevalence rate
 ## data is imputed before model fitting.
 
-setwd("analyses")
 rm(list=ls())
 
 source("src/init.R")
@@ -21,8 +21,7 @@ source("src/misc.R")
 
 
 ## set to the number of cores you would like the models to run on
-ncores <- 10
-
+ncores <- 4
 
 ## **********************************************************
 ## formula for site effects on the bee community
@@ -32,6 +31,11 @@ ncores <- 10
 indiv.data <- indiv.data[order(indiv.data$Stand),]
 repro.block <- repro.block[order(repro.block$Stand),]
 
+## drop 2 outlier max MeanBeeAbund
+## indiv.data <- indiv.data[indiv.data$MeanBeeAbund != max(indiv.data$MeanBeeAbund),]
+## indiv.data <- indiv.data[indiv.data$MeanBeeAbund != max(indiv.data$MeanBeeAbund),]
+
+
 ## all of the variables that are explanatory variables and thus need
 ## to be centered
 vars <- c("FlowerDiversity",
@@ -40,14 +44,14 @@ vars <- c("FlowerDiversity",
           "MeanBeeAbund",
           "MeanHBAbund",
           "Age_LandTrendr",
-          "Acres",
+          "Hectares",
           "Elev")
 
-## log variables for age and acres
+## log variables for age and hectares
 indiv.data$Age_LandTrendr <- log(indiv.data$Age_LandTrendr)
-indiv.data$Acres <- log(indiv.data$Acres)
+indiv.data$Hectares <- log(indiv.data$Hectares)
 repro.block$Age_LandTrendr <- log(repro.block$Age_LandTrendr)
-repro.block$Acres <- log(repro.block$Acres)
+repro.block$Hectares <- log(repro.block$Hectares)
 
 ##  center all of the x variables across the datasets
 indiv.data[, vars] <- apply(indiv.data[, vars], 2, standardize)
@@ -86,7 +90,8 @@ formula.flower.div <- formula(FlowerDiversity | weights(Weights) ~
                               )
 ## flower abund
 formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
-                                        Age_LandTrendr  + Elev + Owner
+                                        Age_LandTrendr  + Elev
+                                +  I(Age_LandTrendr^2) + Owner
                                 )
 
 ## **********************************************************
@@ -95,13 +100,13 @@ formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
 
 ## bee diversity
 formula.bee.div <- formula(MeanBeeDiversity | weights(Weights)~
-                               FlowerDiversity +
-                                   Age_LandTrendr + Acres)
+                               FlowerDiversity +  I(Age_LandTrendr^2)+
+                                   Age_LandTrendr + Hectares)
 
 ## bee abund
 formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
-                                 MeanBloomAbund +
-                                     Age_LandTrendr + Acres)
+                                 MeanBloomAbund +  I(Age_LandTrendr^2)+
+                                     Age_LandTrendr + Hectares)
 
 ## **********************************************************
 ## Model 1.3: formula for bee community effects on parasitism
@@ -109,7 +114,6 @@ formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
 
 formula.parasite <- formula(AnyParasite | weights(WeightsPar) ~
                                 MeanBeeAbund +
-                                    FlowerDiversity +
                                     MeanBeeDiversity +
                                     MeanBloomAbund +
                                     (1|Stand)
@@ -118,8 +122,7 @@ formula.parasite <- formula(AnyParasite | weights(WeightsPar) ~
 formula.parasite.site <- formula(scale(ParasitismRate) | weights(Weights) ~
                                      MeanBeeAbund +
                                      MeanBeeDiversity +
-                                      MeanBloomAbund +
-                                      FlowerDiversity
+                                      MeanBloomAbund
                                  )
 
 ## convert to brms format
@@ -143,7 +146,7 @@ bform <- bf.fabund + bf.fdiv + bf.babund + bf.bdiv + bf.par +
 fit <- brm(bform, indiv.data,
            cores=ncores,
            iter = 10^4,
-           chains =3,
+           chains =1,
            thin=1,
            init=0,
            open_progress = FALSE,

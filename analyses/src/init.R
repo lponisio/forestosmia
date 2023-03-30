@@ -2,15 +2,15 @@
 library(brms)
 library(bayesplot)
 library(tidybayes)
-library(mice)
-library(ggplot2)
-
+library(bayestestR)
 
 ## plotting
-library(tidyr)
-library(dplyr)
-library(viridis)
+library(ggplot2)
 library(tidybayes)
-library(gridExtra)
 library(grid)
+library(ggthemes)
 library(scales)
+library(RColorBrewer)
+
+dir.create("figures/diagnostics", showWarnings = FALSE)
+dir.create("saved/tables", showWarnings = FALSE)

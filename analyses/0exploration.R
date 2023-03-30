@@ -1,6 +1,5 @@
-setwd('/Volumes/bombus/Dropbox (University of Oregon)/forestosmia')
-
-## setwd('~/Dropbox (University of Oregon)/forestosmia')
+## set your working directory to the forestosmia git repo
+setwd('forestosmia')
 
 setwd("analyses")
 rm(list=ls())
