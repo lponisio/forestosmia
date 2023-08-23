@@ -1,4 +1,5 @@
 ## set your working directory to the forestosmia git repo
+setwd('~/Dropbox (University of Oregon)/')
 setwd('forestosmia')
 setwd("analyses")
 ## Prepares the data for model fitting (standardizes continuous
@@ -18,10 +19,11 @@ load("../data/reproblock.Rdata")
 source("src/writeResultsTable.R")
 source("src/makeMultiLevelData.R")
 source("src/misc.R")
+source("src/runParasiteModels.R")
 
 
 ## set to the number of cores you would like the models to run on
-ncores <- 4
+ncores <- 1
 
 ## **********************************************************
 ## formula for site effects on the bee community
@@ -32,7 +34,7 @@ indiv.data <- indiv.data[order(indiv.data$Stand),]
 repro.block <- repro.block[order(repro.block$Stand),]
 
 ## drop 2 outlier max MeanBeeAbund
-## indiv.data <- indiv.data[indiv.data$MeanBeeAbund != max(indiv.data$MeanBeeAbund),]
+indiv.data <- indiv.data[indiv.data$MeanBeeAbund != max(indiv.data$MeanBeeAbund),]
 ## indiv.data <- indiv.data[indiv.data$MeanBeeAbund != max(indiv.data$MeanBeeAbund),]
 
 
@@ -112,13 +114,6 @@ formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
 ## Model 1.3: formula for bee community effects on parasitism
 ## **********************************************************
 
-formula.parasite <- formula(AnyParasite | weights(WeightsPar) ~
-                                MeanBeeAbund +
-                                    MeanBeeDiversity +
-                                    MeanBloomAbund +
-                                    (1|Stand)
-                            )
-
 formula.parasite.site <- formula(scale(ParasitismRate) | weights(Weights) ~
                                      MeanBeeAbund +
                                      MeanBeeDiversity +
@@ -136,28 +131,37 @@ bf.bdiv <- bf(formula.bee.div)
 ## Model 1 community effects on bee parasitism
 ## **********************************************************
 
-bf.par <- bf(formula.parasite, family="bernoulli")
+indiv.data$StandBlock <- paste0(indiv.data$Stand, indiv.data$Block)
 
-## full model
-bform <- bf.fabund + bf.fdiv + bf.babund + bf.bdiv + bf.par +
-    set_rescor(FALSE)
+xvars.parasites <- c("MeanBeeAbund", "MeanBeeDiversity",
+                     "MeanBloomAbund",
+                     "(1|Stand)", "(1|StandBlock)")
 
-## run model
-fit <- brm(bform, indiv.data,
-           cores=ncores,
-           iter = 10^4,
-           chains =1,
-           thin=1,
-           init=0,
-           open_progress = FALSE,
-           control = list(adapt_delta = 0.99))
 
-write.ms.table(fit, "parasitism_poly")
-save(fit, indiv.data,
-     file="saved/parasiteFitMod.Rdata")
+fit.combined.parasite <- runCombinedParasiteModels(indiv.data, "osmia",
+                                      parasites=c("Crithidia",
+                                      "Apicystis", "Ascophaera"),
+                                      xvars.parasites)
+                      
+fit.crithidia <- runParasiteModels(indiv.data, "osmia",
+                                      "Crithidia",
+                                      xvars.parasites,
+                                   SEM=TRUE)
 
-## dignostic figures
-plot.res(fit, "parasite")
+fit.Apicystis <- runParasiteModels(indiv.data, "osmia",
+                                      "Apicystis",
+                                      xvars.parasites,
+                                   SEM=TRUE)
+
+fit.Ascophaera <- runParasiteModels(indiv.data, "osmia",
+                                      "Ascophaera",
+                                      xvars.parasites,
+                                    SEM=TRUE)
+
+fit.anyParasite <- runParasiteModels(indiv.data, "osmia",
+                                      "AnyParasite",
+                                      xvars.parasites,
+                                     SEM=TRUE)
 
 ## ************************************************************
 ## Model 2.1 formulas for the site effects on nest reproduction
@@ -171,6 +175,7 @@ imp.dat.pre <- mice(repro.block, m = 2,
                     print = FALSE)
 
 pred <- imp.dat.pre$pred
+## bookkeeping varaibles that should not be included
 pred[, c("Weights", "Block", "SiteIDs", "Year")] <- 0
 pred[, c("Stand", "Owner")] <- 1
 
@@ -180,7 +185,6 @@ meth[c(2)] <- "rf"
 imp.dat <- mice(repro.block, m = 100, predictorMatrix=pred,
                 method=meth,
                 print = FALSE)
-
 
 densityplot(imp.dat)
 quartz()
@@ -216,14 +220,23 @@ fit2 <- brm_multiple(bform2, data=imp.dat,
                      thin=2,
                      open_progress = FALSE,
                      control = list(adapt_delta = 0.99,
-                                    max_treedepth = 15))
+                                    max_treedepth = 15),
+                     combine = FALSE)
 
 write.ms.table(fit2, "offspring")
 
 save(fit2, repro.block,
      file="saved/offspringFitMod.Rdata")
 
+pool_R2 <- function(mlist, probs = c(0.025, 0.975), robust = FALSE, ...) {
+  r2_post <- sapply(mlist, bayes_R2, summary = FALSE, ..., simplify = TRUE)
+  posterior_summary(c(r2_post), probs = probs, robust = robust)
+}
+
+pool_R2(fit2)
+
 ## diagnostic plots
 mcmc_trace(fit2)
 ggsave("figures/diagnostics/offspring.pdf",
        height=11, width=8.5)
+
