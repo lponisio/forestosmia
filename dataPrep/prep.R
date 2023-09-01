@@ -301,6 +301,7 @@ cleanBees <- function(insect){
     bee$GenusSpecies[bee$GenusSpecies  == "Lasioglossum evylaeus"]  <- NA
     bee$GenusSpecies[bee$GenusSpecies  == "Lasioglossum egregium"]  <- NA
     bee$GenusSpecies[bee$GenusSpecies  == "Melissodes sp."]  <- NA
+    bee$GenusSpecies[bee$GenusSpecies  == ""]  <- NA
 
     ## lump together based on Koch et al. 2018 molecular evidence and
     ## Linc Best confirmation
@@ -600,8 +601,6 @@ print("Stands with nest boxes but no parasites")
 unique(repro.block$Stand)[!unique(repro.block$Stand) %in%
                           unique(indiv.data$Stand[!is.na(indiv.data$TestedTotals)])]
 
-
-
 print("Stands with parasite data but no nest box")
 unique(indiv.data$Stand[!is.na(indiv.data$TestedTotals)])[!
     unique(indiv.data$Stand[!is.na(indiv.data$TestedTotals)])
@@ -612,3 +611,9 @@ unique(indiv.data$Stand[!is.na(indiv.data$TestedTotals)])[!
 
 print("Stands no nest box")
 site.data$Stand[!site.data$Stand %in% unique(repro.block$Stand)]
+
+
+bee.sum <- bee %>%
+    group_by(Genus) %>%
+    summarise(Species = length(unique(GenusSpecies[!is.na(GenusSpecies)])),
+              Indiv = sum(Count))

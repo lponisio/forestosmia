@@ -1,5 +1,4 @@
 ## set your working directory to the forestosmia git repo
-setwd('~/Dropbox (University of Oregon)/')
 setwd('forestosmia')
 setwd("analyses")
 ## Prepares the data for model fitting (standardizes continuous
@@ -23,7 +22,7 @@ source("src/runParasiteModels.R")
 
 
 ## set to the number of cores you would like the models to run on
-ncores <- 1
+ncores <- 3
 
 ## **********************************************************
 ## formula for site effects on the bee community
@@ -33,10 +32,13 @@ ncores <- 1
 indiv.data <- indiv.data[order(indiv.data$Stand),]
 repro.block <- repro.block[order(repro.block$Stand),]
 
-## drop 2 outlier max MeanBeeAbund
-indiv.data <- indiv.data[indiv.data$MeanBeeAbund != max(indiv.data$MeanBeeAbund),]
-## indiv.data <- indiv.data[indiv.data$MeanBeeAbund != max(indiv.data$MeanBeeAbund),]
-
+## drop 1 outlier max MeanBeeAbund? Test based on reviwer
+## suggestion.
+max.abund.par.prep <- indiv.data[!is.na(indiv.data$AnyParasite),]
+max.abund.par <-  unique(max.abund.par.prep$Stand[
+  max.abund.par.prep$MeanBeeAbund ==
+  max(max.abund.par.prep$MeanBeeAbund)])
+## indiv.data <- indiv.data[indiv.data$Stand != max.abund.par,]
 
 ## all of the variables that are explanatory variables and thus need
 ## to be centered
@@ -79,6 +81,9 @@ indiv.data$WeightsPar[is.na(indiv.data$AnyParasite)] <- 0
 ## stan drops all NA data, so can set AnyParasite to 0 with WeightsPar
 ## to keep it in the models
 indiv.data$AnyParasite[is.na(indiv.data$AnyParasite)] <- 0
+indiv.data$Crithidia[is.na(indiv.data$Crithidia)] <- 0
+indiv.data$Apicystis[is.na(indiv.data$Apicystis)] <- 0
+indiv.data$Ascophaera[is.na(indiv.data$Ascophaera)] <- 0
 
 ## **********************************************************
 ## Model 1.1: formula for forest effects on floral community
@@ -138,38 +143,30 @@ xvars.parasites <- c("MeanBeeAbund", "MeanBeeDiversity",
                      "(1|Stand)", "(1|StandBlock)")
 
 
-fit.combined.parasite <- runCombinedParasiteModels(indiv.data, "osmia",
-                                      parasites=c("Crithidia",
-                                      "Apicystis", "Ascophaera"),
-                                      xvars.parasites)
-                      
-fit.crithidia <- runParasiteModels(indiv.data, "osmia",
-                                      "Crithidia",
-                                      xvars.parasites,
-                                   SEM=TRUE)
+## run models with all parasites indivudally 
+fit.combined.parasite <- runCombinedParasiteModels(indiv.data, "osmia_all_data",
+                                                   parasites=c("Crithidia",
+                                                               "Apicystis",
+                                                               "Ascophaera"),
+                                                   xvars.parasites,
+                                                   iter = 10^4,
+                                                   chains = 3)
 
-fit.Apicystis <- runParasiteModels(indiv.data, "osmia",
-                                      "Apicystis",
-                                      xvars.parasites,
-                                   SEM=TRUE)
-
-fit.Ascophaera <- runParasiteModels(indiv.data, "osmia",
-                                      "Ascophaera",
-                                      xvars.parasites,
-                                    SEM=TRUE)
-
-fit.anyParasite <- runParasiteModels(indiv.data, "osmia",
-                                      "AnyParasite",
-                                      xvars.parasites,
-                                     SEM=TRUE)
+## run model with "any parasite" i.e., did a bee test positive for any
+## of the three parasites
+fit.anyParasite <- runParasiteModels(indiv.data, "osmia_all_data",
+                                     "AnyParasite",
+                                     xvars.parasites,
+                                     SEM=TRUE,
+                                     iter = 10^4,
+                                     chains = 3)
 
 ## ************************************************************
 ## Model 2.1 formulas for the site effects on nest reproduction
 ## ************************************************************
 
 ## can use total offspring or total female offspring as the response
-## variable
-
+## variable, both yield similar results. 
 ## data  imputation
 imp.dat.pre <- mice(repro.block, m = 2,
                     print = FALSE)
@@ -216,24 +213,32 @@ fit2 <- brm_multiple(bform2, data=imp.dat,
                      cores=ncores,
                      iter = 5*10^4,
                      chains = 2,
-                     inits=0,
+                     init=0,
                      thin=2,
                      open_progress = FALSE,
                      control = list(adapt_delta = 0.99,
                                     max_treedepth = 15),
                      combine = FALSE)
 
+fit2.raw <- fit2
+fit2 <- combine_models(mlist=fit2, check_data=FALSE)
+
 write.ms.table(fit2, "offspring")
 
-save(fit2, repro.block,
-     file="saved/offspringFitMod.Rdata")
-
+## calculate a pooled R2 combining the models from the different
+## imputed datasets
 pool_R2 <- function(mlist, probs = c(0.025, 0.975), robust = FALSE, ...) {
   r2_post <- sapply(mlist, bayes_R2, summary = FALSE, ..., simplify = TRUE)
   posterior_summary(c(r2_post), probs = probs, robust = robust)
 }
 
-pool_R2(fit2)
+r2.offspring <- pool_R2(fit2.raw)
+round(r2.offspring, 2)
+
+save(fit2, repro.block, 
+     fit2.raw, r2.offspring, 
+     file="saved/offspringFitMod.Rdata")
+
 
 ## diagnostic plots
 mcmc_trace(fit2)

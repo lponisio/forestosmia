@@ -61,7 +61,6 @@ runParasiteModels <- function(spec.data,
 
 
 
-
 runCombinedParasiteModels <- function(spec.data,
                                       species.group,
                                       parasites,
@@ -71,9 +70,8 @@ runCombinedParasiteModels <- function(spec.data,
                                       thin=1,
                                       init=0){
 
-  browser()
   bf.parasite.formulas <- vector(mode="list",
-                                 lenght=length(parasites))
+                                 length=length(parasites))
   names(bf.parasite.formulas) <- parasites
   
   for(parasite in parasites){
@@ -101,17 +99,17 @@ runCombinedParasiteModels <- function(spec.data,
 
   write.ms.table(fit.parasite,
                  sprintf("parasitism_%s_%s",
-                         species.group, parasite))
+                         species.group, paste(parasites, collapse="")))
 
   r2 <- bayes_R2(fit.parasite)
-  print(r2)
+  print(round(r2, 2))
 
   save(fit.parasite, spec.data, r2,
        file=sprintf("saved/parasiteFit_%s_%s.Rdata",
-                    species.group, parasite))
+                    species.group, paste(parasites, collapse="")))
 
   plot.res(fit.parasite,  sprintf("%s_%s",
-                                  species.group, parasite))
+                                  species.group, paste(parasites, collapse="")))
 
   return(list(fit=fit.parasite, r2=r2))
 }

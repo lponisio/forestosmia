@@ -72,7 +72,7 @@ theme_ms <- function(base_size=14, base_family="sans") {
               legend.key.size= unit(0.5, "cm"),
               #legend.margin = unit(0, "cm"),
               legend.title = element_text(face="italic", colour = 'black'),
-              plot.margin=unit(c(10,5,5,5),"mm"),
+              plot.margin=unit(c(6,5,5,5),"mm"),
               strip.background=element_rect(colour="#2D3A4C",fill="white"),
               strip.text = element_text(face="bold", colour =
                                                          'black')
