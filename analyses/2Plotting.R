@@ -70,6 +70,8 @@ makeBeeDivAbundFigs <- function(yvar, ylabs, yrate,
                                 div.sig="gt95",
                                 bloomabund.sig="gt95",
                                 tags=c("A", "B", "C")){
+  ## function for plotting model results, curve color is determined by
+  ## level of support imputed via the XX.sig arguments. 
   
   chooseColors <- function(sig){
     if(sig == "gt95"){

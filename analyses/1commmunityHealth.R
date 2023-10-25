@@ -20,7 +20,6 @@ source("src/makeMultiLevelData.R")
 source("src/misc.R")
 source("src/runParasiteModels.R")
 
-
 ## set to the number of cores you would like the models to run on
 ncores <- 3
 
@@ -32,13 +31,12 @@ ncores <- 3
 indiv.data <- indiv.data[order(indiv.data$Stand),]
 repro.block <- repro.block[order(repro.block$Stand),]
 
-## drop 1 outlier max MeanBeeAbund? Test based on reviwer
+## drop 1 outlier max MeanBeeAbund? Test based on reviewer
 ## suggestion.
 max.abund.par.prep <- indiv.data[!is.na(indiv.data$AnyParasite),]
 max.abund.par <-  unique(max.abund.par.prep$Stand[
   max.abund.par.prep$MeanBeeAbund ==
   max(max.abund.par.prep$MeanBeeAbund)])
-## indiv.data <- indiv.data[indiv.data$Stand != max.abund.par,]
 
 ## all of the variables that are explanatory variables and thus need
 ## to be centered
@@ -88,8 +86,6 @@ indiv.data$Ascophaera[is.na(indiv.data$Ascophaera)] <- 0
 ## **********************************************************
 ## Model 1.1: formula for forest effects on floral community
 ## **********************************************************
-## define all the formulas for the different parts of the models
-
 ## flower diversity
 formula.flower.div <- formula(FlowerDiversity | weights(Weights) ~
                                   + Age_LandTrendr + I(Age_LandTrendr^2) +
@@ -104,7 +100,6 @@ formula.flower.abund <- formula(MeanBloomAbund | weights(Weights) ~
 ## **********************************************************
 ## Model 1.2: formula for forest effects on bee community
 ## **********************************************************
-
 ## bee diversity
 formula.bee.div <- formula(MeanBeeDiversity | weights(Weights)~
                                FlowerDiversity +  I(Age_LandTrendr^2)+
@@ -118,14 +113,13 @@ formula.bee.abund <- formula(MeanBeeAbund | weights(Weights)~
 ## **********************************************************
 ## Model 1.3: formula for bee community effects on parasitism
 ## **********************************************************
-
 formula.parasite.site <- formula(scale(ParasitismRate) | weights(Weights) ~
                                      MeanBeeAbund +
                                      MeanBeeDiversity +
                                       MeanBloomAbund
                                  )
 
-## convert to brms format
+## convert to all models brms format
 bf.par.site <- bf(formula.parasite.site)
 bf.fabund <- bf(formula.flower.abund)
 bf.fdiv <- bf(formula.flower.div)
@@ -135,15 +129,14 @@ bf.bdiv <- bf(formula.bee.div)
 ## **********************************************************
 ## Model 1 community effects on bee parasitism
 ## **********************************************************
-
+## create a block-stand identified to be used as a random effect
 indiv.data$StandBlock <- paste0(indiv.data$Stand, indiv.data$Block)
 
 xvars.parasites <- c("MeanBeeAbund", "MeanBeeDiversity",
                      "MeanBloomAbund",
                      "(1|Stand)", "(1|StandBlock)")
 
-
-## run models with all parasites indivudally 
+## run models with all parasites simultaneously 
 fit.combined.parasite <- runCombinedParasiteModels(indiv.data, "osmia_all_data",
                                                    parasites=c("Crithidia",
                                                                "Apicystis",

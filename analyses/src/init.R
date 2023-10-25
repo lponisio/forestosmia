@@ -1,6 +1,6 @@
 ## models
 library(brms)
-#library(mice)
+library(mice)
 library(bayesplot)
 library(tidybayes)
 library(bayestestR)
@@ -16,5 +16,6 @@ library(scales)
 library(RColorBrewer)
 library(gridExtra)
 
+dir.create("figures/", showWarnings = FALSE)
 dir.create("figures/diagnostics", showWarnings = FALSE)
 dir.create("saved/tables", showWarnings = FALSE)

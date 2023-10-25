@@ -15,10 +15,9 @@ source("src/ggplotThemes.R")
 load("../data/indivdata.Rdata")
 load("../data/reproblock.Rdata")
 
+## parasite totals
 par.counts <- table(indiv.data$ParasiteRichness[indiv.data$Apidae == 1])
-
 par.counts <- par.counts/sum(par.counts)
-
 par.counts <- as.data.frame(par.counts)
 
 p <- ggplot(data=par.counts, aes(x=Var1, y=Freq)) +
@@ -33,12 +32,14 @@ ggsave(p, file="../../forestosmia_saved/figures/summary_parasites.pdf",
         height=4, width=5)
 
 
+## Screened individuals per stand
 stands <- table(indiv.data$Stand[indiv.data$Apidae == 1])
 length(stands)
 
+## number of stands with nest block data
 length(unique(repro.block$Stand))
 
+## stands with nest block data but no parasite data
 blocks.with.par <- unique(repro.block$Stand[!is.na(repro.block$ParasitismRate)])
-
 names(stands)[!names(stands) %in% blocks.with.par]
 
